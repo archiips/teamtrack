@@ -2059,7 +2059,9 @@ function TaskDrawer({
 // Storage can be blocked in third-party iframes (e.g. inside Canvas).
 function store(op: "get" | "set" | "remove") {
   try {
-    const key = "tt-companion-dismissed";
+    // v2: the old key was also set by the panel's X, which hid Pip by mistake.
+    const key = "tt-pip-hidden-v2";
+    localStorage.removeItem("tt-companion-dismissed");
     if (op === "get") return localStorage.getItem(key);
     if (op === "set") localStorage.setItem(key, "yes");
     else localStorage.removeItem(key);
