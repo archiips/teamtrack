@@ -44,8 +44,10 @@ Canvas LTI client IDs are **global** DeveloperKey identifiers (`developer_key.gl
 Manual deploy after checks: `npx vercel --prod --yes`. Automatic GitHub deployment was not connected successfully; do not assume pushes deploy. Never run production migrations against preview/test databases accidentally. The current synthetic MVP uses transactional PostgreSQL JSON aggregates with optimistic task/agreement versions; it is not the normalized institutional-scale schema in the original architecture proposal.
 
 ## Demo script
-1. Open the public app and choose the professor profile.
+1. Open the public app and choose the professor profile. Point out Pip in the corner: open it to show what needs support (blocked task, pending agreements, unassigned students).
 2. Show teams needing support and inspect the blocked route task.
 3. Switch demo profile to Alex, accept the agreement, add evidence to the interview task and mark it done.
 4. Switch back to professor, refresh, inspect the recorded actor, evidence and event history.
-5. Separately demonstrate genuine Canvas launch and roster sync only after their checks pass. A synthetic profile selector is not Canvas authentication.
+5. Canvas: open https://duct-groggy-kitten.ngrok-free.dev/courses/1 and click TeamTrack in course navigation. It launches embedded in Canvas, shows the course name, instructor role and "Roster synced". Use Sync Canvas roster, then Teams & people to create a team from the real roster.
+
+Canvas course data is separate from the synthetic demo; demo:reset never touches it. If the embedded frame misbehaves on another browser, the launch also works top-level at `/courses/1/external_tools/2?display=borderless`.

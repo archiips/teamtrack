@@ -1,3 +1,5 @@
+> **Status update (2026-10-13, later):** the page corruption is repaired, the Canvas key fix is verified end-to-end (top-level and embedded), the 3D companion is finished, and everything is deployed. See `docs/releases/progress.md` for the verified state. The notes below are historical.
+
 # TeamTrack continuation handoff — 2026-10-13
 
 ## User goal and authorization
