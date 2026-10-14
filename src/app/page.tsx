@@ -3,6 +3,13 @@ import { today } from "@/lib/dates";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import {
+  MemberBreakdown,
+  StatusBar,
+  TeamMenu,
+  mixLabel,
+} from "@/components/insights";
+import { memberBreakdown, teamHealth } from "@/lib/insights";
 const CompanionModel = dynamic(() => import("@/components/companion-model"), {
   ssr: false,
 });
@@ -16,7 +23,6 @@ import {
   Activity,
   Plus,
   Search,
-  ChevronDown,
   ChevronRight,
   Check,
   CheckCircle2,
@@ -247,15 +253,21 @@ export default function Page() {
               {error}
             </p>
           )}
-          <div className="canvas-note">
+          <a
+            className="canvas-note"
+            href="https://duct-groggy-kitten.ngrok-free.dev/courses/1"
+            target="_blank"
+            rel="noreferrer"
+          >
             <GraduationCap size={22} />
             <p>
-              <strong>Made to live inside Canvas</strong>
+              <strong>Open the Canvas sandbox</strong>
               <br />
-              This entry uses demo profiles. Real Canvas launch is a separate
-              integration.
+              See TeamTrack launched from a real Canvas course. Available while
+              the class demo sandbox is running.
             </p>
-          </div>
+            <ArrowUpRight size={18} />
+          </a>
         </section>
       </main>
     );
@@ -403,7 +415,6 @@ export default function Page() {
               {namespace === "demo" ? "Fall 2026 · CSS 474" : "Canvas course"}
             </small>
           </div>
-          <ChevronDown size={15} />
         </div>
         <div className="nav-label">Your workspace</div>
         <nav>
@@ -582,22 +593,27 @@ export default function Page() {
               </div>
             </div>
             <div className="project-right">
-              <div className="avatar-stack">
+              <div
+                className="avatar-stack"
+                hidden={prof && (view === "overview" || view === "team")}
+              >
                 {members.map((u) => (
                   <Avatar key={u.id} user={u} small />
                 ))}
               </div>
-              <select
-                aria-label="Current team"
-                value={team?.id || ""}
-                onChange={(e) => setTeamId(e.target.value)}
-              >
-                {s.teams.map((t) => (
-                  <option value={t.id} key={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+              {prof && (view === "overview" || view === "team") ? (
+                <span className="team-label">
+                  All teams <span className="dot">·</span> {s.teams.length}
+                </span>
+              ) : prof && s.teams.length > 1 ? (
+                <TeamMenu
+                  teams={s.teams}
+                  value={team?.id || ""}
+                  onChange={setTeamId}
+                />
+              ) : team ? (
+                <span className="team-label">{team.name}</span>
+              ) : null}
               {prof && (
                 <button
                   className="icon-button"
@@ -691,9 +707,13 @@ export default function Page() {
                   {prof ? (
                     <div className="team-overview">
                       {s.teams.map((t) => {
-                        const ts = s.tasks.filter((k) => k.teamId === t.id),
-                          d = ts.filter((k) => k.status === "done").length,
-                          reasons = attention(s, t.id);
+                        const h = teamHealth(s, t, today()),
+                          reasons = [
+                            h.blocked && `${h.blocked} blocked`,
+                            h.overdue && `${h.overdue} overdue`,
+                            h.pendingAgreement &&
+                              `${h.pendingAgreement} agreement pending`,
+                          ].filter(Boolean) as string[];
                         return (
                           <button
                             key={t.id}
@@ -703,30 +723,33 @@ export default function Page() {
                               setView("tasks");
                             }}
                           >
-                            <span className="team-emblem">
-                              <Compass size={23} />
+                            <span className="avatar-stack">
+                              {s.users
+                                .filter((u) => t.memberIds.includes(u.id))
+                                .slice(0, 4)
+                                .map((u) => (
+                                  <Avatar key={u.id} user={u} small />
+                                ))}
                             </span>
                             <div>
                               <strong>{t.name}</strong>
+                              <StatusBar mix={h} label={mixLabel(h)} />
                               <span>
-                                {t.memberIds.length} members{" "}
-                                <span className="dot">·</span> {d} of{" "}
-                                {ts.length} tasks done
+                                {h.done} of {h.total} tasks done{" "}
+                                <span className="dot">·</span>{" "}
+                                {t.memberIds.length} members
                               </span>
-                              <div className="progress">
-                                <i
-                                  style={{
-                                    width: `${ts.length ? (d / ts.length) * 100 : 0}%`,
-                                  }}
-                                />
-                              </div>
                             </div>
-                            <span
-                              className={
-                                reasons.length ? "attention-tag" : "clear-tag"
-                              }
-                            >
-                              {reasons.length ? reasons[0] : "On track"}
+                            <span className="reason-chips">
+                              {reasons.length ? (
+                                reasons.map((r) => (
+                                  <span key={r} className="attention-tag">
+                                    {r}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="clear-tag">On track</span>
+                              )}
                             </span>
                             <ChevronRight size={17} />
                           </button>
@@ -918,13 +941,13 @@ export default function Page() {
                         .filter((t) => t.status === status)
                         .map((t) => (
                           <button
-                            className="board-card"
+                            className={`board-card ${t.status}`}
                             key={t.id}
                             onClick={() => setSelected(t.id)}
                           >
                             <small>{t.checkpoint}</small>
                             <strong>{t.title}</strong>
-                            {t.blocker && (
+                            {t.blocker && t.status !== "done" && (
                               <span className="blocker">
                                 <Flag size={12} />
                                 Blocked
@@ -935,7 +958,11 @@ export default function Page() {
                                 user={s.users.find((u) => u.id === t.ownerId)}
                                 small
                               />
-                              <span>{date(t.due)}</span>
+                              <span
+                                className={`due-chip ${t.status !== "done" && t.due < today() ? "overdue" : ""}`}
+                              >
+                                {date(t.due)}
+                              </span>
                             </div>
                           </button>
                         ))}
@@ -980,38 +1007,11 @@ export default function Page() {
                       <Compass size={24} />
                     </span>
                   </div>
-                  {s.users
-                    .filter((u) => t.memberIds.includes(u.id))
-                    .map((u) => {
-                      const ut = s.tasks.filter(
-                          (k) => k.ownerId === u.id && k.teamId === t.id,
-                        ),
-                        updates = s.entries.filter(
-                          (e) =>
-                            e.actorId === u.id && e.kind === "contribution",
-                        );
-                      return (
-                        <div className="member-row" key={u.id}>
-                          <Avatar user={u} />
-                          <div>
-                            <strong>
-                              {u.name}
-                              {u.id === userId && (
-                                <small className="you">You</small>
-                              )}
-                            </strong>
-                            <span>
-                              {ut.filter((k) => k.status === "done").length} /{" "}
-                              {ut.length} assigned tasks completed
-                            </span>
-                          </div>
-                          <span className="member-updates">
-                            {updates.length} update
-                            {updates.length !== 1 ? "s" : ""}
-                          </span>
-                        </div>
-                      );
-                    })}
+                  <MemberBreakdown
+                    rows={memberBreakdown(s, t)}
+                    userId={userId}
+                    avatar={(r) => <Avatar user={r.user} />}
+                  />
                   <div className="panel-foot">
                     Counts describe recorded activity. Review the work for
                     context.

@@ -425,7 +425,9 @@ nav button:hover:not(.active) {
   font-size: 12px;
   display: block;
 }
-.project-strip span:not(.avatar):not(.project-mark):not(.dot) {
+.project-strip
+  > div:first-child
+  span:not(.avatar):not(.project-mark):not(.dot) {
   font-size: 10px;
   color: #9297a6;
 }
@@ -581,7 +583,7 @@ nav button:hover:not(.active) {
 .team-summary strong {
   font-size: 12px;
 }
-.team-summary > div > span {
+.team-summary > div > span:not(.status-bar) {
   display: block;
   color: #969bab;
   font-size: 10px;
@@ -2046,7 +2048,9 @@ textarea::placeholder {
   .project-strip strong {
     font-size: 10px;
   }
-  .project-strip span:not(.avatar):not(.project-mark):not(.dot) {
+  .project-strip
+    > div:first-child
+    span:not(.avatar):not(.project-mark):not(.dot) {
     font-size: 9px;
   }
   .project-mark {
@@ -2273,7 +2277,7 @@ textarea::placeholder {
   font-size: 13px;
 }
 .task-name small,
-.team-summary > div > span {
+.team-summary > div > span:not(.status-bar) {
   font-size: 11px;
   color: #6c788d;
 }
@@ -2912,4 +2916,280 @@ textarea::placeholder {
 }
 .embedded .workspace {
   margin-left: 76px;
+}
+
+/* ---- Insights: status bars, member breakdown, team menu (21st menu pattern, original CSS) ---- */
+.status-bar {
+  display: flex;
+  height: 8px;
+  width: 100%;
+  max-width: 260px;
+  border-radius: 6px;
+  background: #edf0f6;
+  overflow: hidden;
+  gap: 2px;
+  margin: 9px 0 7px;
+}
+.status-bar i {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+.status-bar i:not([style*="width: 0%"]) {
+  min-width: 4px;
+}
+.status-bar .done,
+.legend .done {
+  background: var(--green);
+}
+.status-bar .in_progress,
+.legend .in_progress {
+  background: #6f8fcb;
+}
+.status-bar .todo,
+.legend .todo {
+  background: #c5ccdb;
+}
+.team-summary {
+  padding: 18px 22px;
+}
+.team-summary strong {
+  font-size: 14px;
+}
+.team-summary > .avatar-stack {
+  flex: none;
+  width: 92px;
+}
+.team-summary > div > span:not(.status-bar) {
+  font-size: 12px;
+}
+.reason-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 230px;
+}
+.attention-tag,
+.clear-tag {
+  font-size: 11px;
+  font-weight: 650;
+  padding: 5px 9px;
+  border-radius: 999px;
+}
+.breakdown {
+  padding: 6px 22px 4px;
+}
+.breakdown-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f2f6;
+}
+.breakdown-main {
+  flex: 1;
+  min-width: 0;
+}
+.breakdown-main strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.breakdown-main .status-bar {
+  max-width: none;
+}
+.breakdown-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #69728a;
+}
+.pending-tag {
+  font-size: 11px;
+  font-weight: 650;
+  color: #9a713a;
+  background: #fbf0df;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.legend {
+  display: flex;
+  gap: 16px;
+  padding: 14px 0 10px;
+  font-size: 11px;
+  color: #7a8399;
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.team-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  padding: 7px 4px;
+  white-space: nowrap;
+}
+.team-menu {
+  position: relative;
+}
+.team-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #dfe3ec;
+  border-radius: 8px;
+  background: white;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  box-shadow: 0 2px 0 #e9ecf3;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+.team-trigger:hover,
+.team-trigger[aria-expanded="true"] {
+  border-color: #b9c4dc;
+  background: #f7f8fc;
+}
+.team-trigger > svg:first-child {
+  color: #7a8bb3;
+}
+.team-trigger[aria-expanded="true"] > svg:last-child {
+  transform: rotate(180deg);
+}
+.team-options {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  min-width: 220px;
+  padding: 6px;
+  background: white;
+  border: 1px solid #e3e7f0;
+  border-radius: 10px;
+  box-shadow: 0 14px 34px #0107361f;
+  animation: pip-in 0.12s ease-out;
+}
+.team-options button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.team-options button small {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: #7a8399;
+  margin-top: 2px;
+}
+.team-options button:hover,
+.team-options button:focus-visible {
+  background: #f3f5fa;
+  outline: none;
+}
+.team-options button[aria-selected="true"] {
+  background: #fcf6e6;
+}
+.team-options button > svg {
+  color: var(--green);
+}
+/* Board: status edge and due chips. */
+.board-card {
+  border-left: 4px solid #c5ccdb;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s;
+}
+.board-card.in_progress {
+  border-left-color: #6f8fcb;
+}
+.board-card.done {
+  border-left-color: var(--green);
+}
+.board-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px #0d1c4212;
+}
+.board-card > strong {
+  font-size: 14px;
+}
+.board-column h3 small {
+  background: #eef1f7;
+  color: #5f687e;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.due-chip {
+  font-size: 11px;
+  font-weight: 650;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f1f3f8;
+  color: #5f687e;
+}
+.due-chip.overdue {
+  background: #fdeee9;
+  color: #a6503a;
+}
+/* Canvas entry point on the welcome page. */
+a.canvas-note {
+  text-decoration: none;
+  align-items: center;
+  margin-top: 28px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 2px 0 #e9ecf3;
+  color: var(--blue);
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+a.canvas-note:hover {
+  border-color: #b9c4dc;
+  background: #f7f8fc;
+}
+a.canvas-note p {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #69728a;
+}
+a.canvas-note strong {
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--navy);
+}
+@media (max-width: 900px) {
+  .team-summary > .avatar-stack {
+    display: none;
+  }
+  .reason-chips {
+    max-width: 120px;
+  }
 }
