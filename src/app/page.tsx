@@ -10,6 +10,7 @@ import {
   mixLabel,
 } from "@/components/insights";
 import { memberBreakdown, teamHealth } from "@/lib/insights";
+import { Doodles } from "@/components/doodles";
 import {
   CountUp,
   Ring,
@@ -205,6 +206,7 @@ export default function Page() {
     return (
       <main className="welcome">
         <section className="welcome-story">
+          <Doodles variant="welcome" />
           <div className="brand">
             <Layers />
             TeamTrack
@@ -420,6 +422,24 @@ export default function Page() {
       </small>
     </>
   );
+  const title: [string, string, string] =
+    view === "overview"
+      ? prof
+        ? ["Every team. One ", "clear", " view."]
+        : [
+            `Good ${new Date().getHours() < 12 ? "morning" : "evening"}, `,
+            me.name.split(" ")[0],
+            ".",
+          ]
+      : view === "tasks"
+        ? ["Make room for ", "good work", "."]
+        : view === "team"
+          ? prof
+            ? ["The people behind ", "the project", "."]
+            : ["Better, ", "together", "."]
+          : view === "agreement"
+            ? ["Start on the ", "same page", "."]
+            : ["The story of ", "your work", "."];
   function taskRow(t: Task) {
     const owner = s!.users.find((u) => u.id === t.ownerId);
     return (
@@ -533,6 +553,7 @@ export default function Page() {
         </div>
       </aside>
       <div className="workspace">
+        <Doodles variant="band" />
         <header className="topbar">
           <div className="breadcrumb">
             <span>{s.course}</span>
@@ -566,19 +587,9 @@ export default function Page() {
                   : "Your team, moving forward"}
               </div>
               <h1>
-                {view === "overview"
-                  ? prof
-                    ? "Every team. One clear view."
-                    : `Good ${new Date().getHours() < 12 ? "morning" : "evening"}, ${me.name.split(" ")[0]}.`
-                  : view === "tasks"
-                    ? "Make room for good work."
-                    : view === "team"
-                      ? prof
-                        ? "The people behind the project."
-                        : "Better, together."
-                      : view === "agreement"
-                        ? "Start on the same page."
-                        : "The story of your work."}
+                {title[0]}
+                <em className="accent">{title[1]}</em>
+                {title[2]}
               </h1>
               <p>
                 {view === "overview"

@@ -3806,3 +3806,346 @@ nav button.active {
     font-size: 14px;
   }
 }
+
+/* =====================================================================
+   Personality layer. Inspiration: Little Plains (serif accents, fine
+   line birds, scroll reveals), Wakeout (sticker cards, offset shadows,
+   doodles, highlighter), Tanaya Khadke (paper grid). Original CSS/SVG,
+   TeamTrack navy/cream palette only.
+   ===================================================================== */
+:root {
+  --paper: #fbf7ec;
+  --sticker: 2px solid var(--ink);
+}
+body,
+.workspace {
+  background-color: var(--paper);
+}
+/* Faint graph-paper grid under the content. */
+.workspace {
+  background-image:
+    linear-gradient(#0d1c420a 1px, transparent 1px),
+    linear-gradient(90deg, #0d1c420a 1px, transparent 1px);
+  background-size: 32px 32px;
+  min-height: 100vh;
+}
+.workspace > .topbar,
+.workspace > .main {
+  position: relative;
+  z-index: 1;
+}
+/* Type: rounded display + serif italic accent. */
+.page-heading h1,
+.panel-title h2,
+.welcome-story h1,
+.welcome-login h2,
+.stats strong,
+.brand,
+.focus-card h2,
+.modal h2 {
+  font-family: var(--font-display), Manrope, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+.page-heading h1 {
+  font-size: clamp(32px, 3.4vw, 46px);
+  letter-spacing: -0.8px;
+}
+.stats strong {
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+.accent,
+.welcome-story h1 em {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  position: relative;
+  white-space: nowrap;
+  color: var(--cream);
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  z-index: 0;
+}
+.accent {
+  font-size: 1.12em;
+  padding: 0 0.08em;
+}
+/* Wakeout-style highlighter stroke under the accent word. */
+.accent::after,
+.welcome-story h1 em::after {
+  content: "";
+  position: absolute;
+  left: -0.06em;
+  right: -0.06em;
+  bottom: 0.08em;
+  height: 0.3em;
+  background: #3a5aa0;
+  border-radius: 0.2em 0.5em 0.3em 0.6em;
+  transform: rotate(-1.5deg);
+  z-index: -1;
+}
+.motion-ok .accent::after,
+.motion-ok .welcome-story h1 em::after {
+  transform-origin: left;
+  animation: highlight 0.7s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes highlight {
+  from {
+    transform: rotate(-1.5deg) scaleX(0);
+  }
+}
+.welcome-story h1 em::after {
+  background: #3a5aa0;
+}
+/* Tilted badge on the band. */
+.page-kicker {
+  background: var(--cream);
+  color: var(--ink);
+  border: var(--sticker);
+  box-shadow: 3px 3px 0 #3a5aa0;
+  transform: rotate(-1.5deg);
+  font-family: var(--font-display), Manrope, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+/* Sticker cards for the headline numbers. */
+.stats > div {
+  border: var(--sticker) !important;
+  box-shadow: 5px 5px 0 var(--ink);
+  border-radius: 18px;
+}
+.stats > div:nth-child(odd) {
+  transform: rotate(-0.6deg);
+}
+.stats > div:nth-child(even) {
+  transform: rotate(0.6deg);
+}
+.stats > div:hover {
+  transform: rotate(0) translate(-2px, -3px);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+.stats .cream-stat {
+  background: var(--cream);
+}
+.stat-icon {
+  border: 1.5px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.stat-icon.cream {
+  background: #fff;
+}
+/* Sticker buttons on navy. */
+.page-heading .primary {
+  border: var(--sticker);
+  box-shadow: 4px 4px 0 #3a5aa0;
+  border-radius: 12px;
+  font-family: var(--font-display), Manrope, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+}
+.page-heading .primary:hover:not(:disabled) {
+  transform: translate(-1px, -2px);
+  box-shadow: 6px 6px 0 #3a5aa0;
+}
+.page-heading .primary:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 #3a5aa0;
+}
+.pip-bubble {
+  border: var(--sticker);
+  box-shadow: 3px 3px 0 #3a5aa0;
+  transform: rotate(-2deg);
+  font-family: var(--font-display), Manrope, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  animation: none;
+}
+.motion-ok .pip-bubble {
+  animation: bubble-tilt 4s ease-in-out infinite;
+}
+@keyframes bubble-tilt {
+  50% {
+    transform: rotate(-2deg) translateY(-3px);
+  }
+}
+/* Project strip: crisp outline instead of a soft glow. */
+.project-strip {
+  border: var(--sticker);
+  box-shadow: 4px 4px 0 #3a5aa0;
+}
+/* Panels stay clean for reading, with a slightly warmer edge. */
+.panel {
+  border-color: #e7e1d0;
+  border-radius: 18px;
+}
+.focus-card {
+  border: var(--sticker);
+  box-shadow: 5px 5px 0 #c9b884;
+}
+/* Doodles. */
+.doodles {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: var(--band);
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.doodles--welcome {
+  height: 100%;
+}
+.doodles svg {
+  position: absolute;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.d-squiggle {
+  width: 110px;
+  top: 34%;
+  left: 47%;
+  stroke: #f3d38a;
+  stroke-width: 4;
+}
+.d-star {
+  width: 30px;
+  top: 16%;
+  right: 31%;
+  fill: #fcf1d0 !important;
+  stroke: none;
+}
+.d-star.small {
+  width: 16px;
+  top: 44%;
+  right: 40%;
+  fill: #f3d38a !important;
+}
+.d-dots {
+  width: 70px;
+  top: 22%;
+  right: 3%;
+  fill: #5674b2 !important;
+  stroke: none;
+}
+.d-loop {
+  width: 90px;
+  top: 8%;
+  left: 38%;
+  stroke: #5674b2;
+  stroke-width: 3;
+}
+.d-birds {
+  width: 64px;
+  top: 12%;
+  right: 46%;
+  stroke: #fcf1d0cc;
+  stroke-width: 2;
+}
+.doodles--welcome .d-squiggle {
+  top: auto;
+  bottom: 20%;
+  left: 60%;
+}
+.doodles--welcome .d-star {
+  top: 9%;
+  right: 12%;
+}
+.doodles--welcome .d-star.small {
+  top: 48%;
+  right: 22%;
+}
+.doodles--welcome .d-dots {
+  top: auto;
+  bottom: 8%;
+  right: 8%;
+}
+.doodles--welcome .d-loop {
+  top: 30%;
+  left: auto;
+  right: 6%;
+}
+.doodles--welcome .d-birds {
+  top: 6%;
+  right: 30%;
+}
+.motion-ok .d-star {
+  animation: twinkle 3.2s ease-in-out infinite;
+}
+.motion-ok .d-star.small {
+  animation-delay: 1.4s;
+}
+@keyframes twinkle {
+  50% {
+    transform: scale(0.75) rotate(20deg);
+    opacity: 0.7;
+  }
+}
+/* Welcome: sticker profile cards and display headings. */
+.welcome-story h1 {
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+.profiles button {
+  border: var(--sticker);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.profiles button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+  border-color: var(--ink);
+}
+.profiles button:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--ink);
+}
+a.canvas-note {
+  border: var(--sticker);
+  box-shadow: 4px 4px 0 #c9b884;
+}
+.welcome {
+  background-color: var(--paper);
+}
+/* Little Plains-style reveal as panels scroll into view (no JS, so it
+   can never get stuck invisible). */
+@supports (animation-timeline: view()) {
+  .motion-ok :is(.overview-grid, .team-grid, .agreement-grid) > * {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+}
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+@media (max-width: 900px) {
+  .d-squiggle,
+  .d-birds,
+  .d-loop {
+    display: none;
+  }
+}
+@media (max-width: 650px) {
+  .stats > div:nth-child(n) {
+    transform: none;
+  }
+  .accent {
+    white-space: normal;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stats > div:nth-child(n),
+  .page-kicker,
+  .pip-bubble {
+    transform: none;
+  }
+}
+/* Offset sticker shadows must never cause sideways scrolling. */
+.workspace {
+  overflow-x: clip;
+}
