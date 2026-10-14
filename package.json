@@ -1,0 +1,39 @@
+{
+  "name": "teamtrack",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "vitest run tests/domain.test.ts tests/lti.test.ts",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "eslint .",
+    "test:e2e": "playwright test",
+    "test:integration": "vitest run tests/api.test.ts",
+    "demo:reset": "node --env-file=.env.local --import tsx scripts/reset-demo.ts --synthetic-demo-only"
+  },
+  "dependencies": {
+    "jose": "^6.2.12",
+    "lucide-react": "^1.56.0",
+    "next": "^16.4.0",
+    "postgres": "^3.4.9",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.0",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vercel": "^64.0.2",
+    "vitest": "^5.0.4"
+  },
+  "type": "module"
+}

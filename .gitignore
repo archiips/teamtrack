@@ -14,3 +14,13 @@ playwright-report/
 test-results/
 TeamTrack.pdf
 .DS_Store
+
+.local/
+.superpowers/
+.vercel
+.env*
+
+.canvas-sandbox/
+*.tsbuildinfo
+
+!.env.example
