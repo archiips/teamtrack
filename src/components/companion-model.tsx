@@ -7,12 +7,23 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 export default function CompanionModel({
   hero = false,
   active = false,
+  cheer = 0,
+  attention = false,
 }: {
   hero?: boolean;
+  /** Turn toward the open panel and raise a hand. */
   active?: boolean;
+  /** Increment to make Pip hop and wave (e.g. after a save). */
+  cheer?: number;
+  /** Nod now and then while there is something worth a look. */
+  attention?: boolean;
 }) {
   const host = useRef<HTMLSpanElement>(null);
-  const setActive = useRef<(on: boolean) => void>(() => {});
+  const control = useRef({
+    active: (on: boolean) => void on,
+    cheer: () => {},
+    attention: (on: boolean) => void on,
+  });
   useEffect(() => {
     const el = host.current;
     if (!el) return;
@@ -77,18 +88,21 @@ export default function CompanionModel({
     );
     body.position.set(0, -0.74, -0.02);
     character.add(body);
-    const hands: THREE.Mesh[] = [];
+    const hands: THREE.Mesh[] = [],
+      eyes: THREE.Mesh[] = [];
     for (const x of [-0.32, 0.32]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.105, 20, 16), navy);
       eye.scale.set(0.77, 1.2, 0.4);
       eye.position.set(x, 0.4, 0.548);
       character.add(eye);
+      eyes.push(eye);
       const gleam = new THREE.Mesh(
         new THREE.SphereGeometry(0.027, 12, 8),
         white,
       );
       gleam.position.set(x - 0.025, 0.44, 0.586);
       character.add(gleam);
+      eyes.push(gleam);
       const cheek = new THREE.Mesh(
         new THREE.SphereGeometry(0.09, 16, 12),
         gold,
@@ -150,32 +164,74 @@ export default function CompanionModel({
     shadow.position.y = -1.28;
     shadow.scale.set(1.25, 0.65, 1);
     scene.add(shadow);
+    eyes.forEach((m) => (m.userData.sy = m.scale.y));
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     let frame = 0,
-      until = performance.now() + 3500,
-      targetX = -0.08,
-      targetY = -0.23,
-      wave = 0;
-    function render(now: number) {
-      frame = 0;
-      if (document.hidden) return;
-      const motion = !reduced.matches && now < until;
-      character.rotation.y += (targetY - character.rotation.y) * 0.07;
-      character.rotation.x += (targetX - character.rotation.x) * 0.07;
-      character.rotation.z = -0.06;
-      character.position.y = motion ? Math.sin(now * 0.0018) * 0.055 : 0;
-      // Raise the left hand (viewer's left, toward the panel) while active.
-      const lift = wave
-        ? 0.62 + (motion ? Math.sin(now * 0.012) * 0.06 : 0)
-        : 0;
+      last = 0,
+      inView = true,
+      wave = false,
+      attend = false,
+      lookX = -0.08,
+      lookY = -0.23,
+      hopAt = -1e9,
+      nextBlink = performance.now() + 2500,
+      nodAt = performance.now() + 5000;
+    const live = () => !reduced.matches && !document.hidden && inView;
+    /** Sets every moving part for time `now`. Static pose under reduced motion. */
+    function pose(now: number) {
+      const animate = !reduced.matches,
+        t = now * 0.001,
+        tx = wave ? 0.12 : lookX,
+        ty = wave ? -0.55 : lookY,
+        hop = (now - hopAt) / 700,
+        cheering = hop >= 0 && hop < 1.6;
+      if (!animate) {
+        character.rotation.set(tx, ty, -0.06);
+        character.position.y = 0;
+        hands[0].position.y = wave || cheering ? -0.06 : -0.68;
+        return;
+      }
+      character.rotation.y += (ty - character.rotation.y) * 0.08;
+      character.rotation.x += (tx - character.rotation.x) * 0.08;
+      character.rotation.z = -0.06 + Math.sin(t * 1.1) * 0.035;
+      let y = Math.sin(t * 1.6) * 0.07;
+      if (hop >= 0 && hop < 1) y += Math.sin(hop * Math.PI) * 0.35;
+      character.position.y = y;
+      if (attend && !wave && now > nodAt) {
+        const n = (now - nodAt) / 650;
+        if (n < 1) character.rotation.x += Math.sin(n * Math.PI * 2) * 0.05;
+        else nodAt = now + 7000;
+      }
+      const lift = wave || cheering ? 0.62 + Math.sin(now * 0.012) * 0.08 : 0;
       hands[0].position.y += (-0.68 + lift - hands[0].position.y) * 0.15;
+      let open = 1;
+      const b = now - nextBlink;
+      if (b > 0) {
+        open = b < 160 ? Math.max(0.1, Math.abs(1 - b / 80)) : 1;
+        if (b >= 160) nextBlink = now + 2500 + Math.random() * 3000;
+      }
+      eyes.forEach((m) => (m.scale.y = m.userData.sy * open));
+      satellite.position.x = Math.cos(t * 0.8) * 1.48;
+      satellite.position.z = Math.sin(t * 0.8) * 0.45 - 0.25;
+    }
+    // ~30fps is plenty for a gentle idle and spares the GPU on projectors.
+    function loop(now: number) {
+      frame = 0;
+      if (!live()) return;
+      frame = requestAnimationFrame(loop);
+      if (now - last < 33) return;
+      last = now;
+      pose(now);
       renderer.render(scene, camera);
-      if (motion) frame = requestAnimationFrame(render);
     }
     function draw() {
-      // rAF never fires in hidden tabs, so paint a still frame immediately.
-      if (document.hidden) renderer.render(scene, camera);
-      else if (!frame) frame = requestAnimationFrame(render);
+      if (live()) {
+        if (!frame) frame = requestAnimationFrame(loop);
+      } else {
+        // rAF never fires in hidden tabs, so paint a still frame immediately.
+        pose(performance.now());
+        renderer.render(scene, camera);
+      }
     }
     const resize = new ResizeObserver(() => {
       const w = el!.clientWidth,
@@ -187,48 +243,59 @@ export default function CompanionModel({
       draw();
     });
     resize.observe(el);
-    function move(e: PointerEvent) {
-      const b = el!.getBoundingClientRect();
-      targetY = ((e.clientX - b.left - b.width / 2) / b.width) * 0.7;
-      targetX = (-(e.clientY - b.top - b.height / 2) / b.height) * 0.3;
-      until = performance.now() + 1500;
+    const seen = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
       draw();
+    });
+    seen.observe(el);
+    // Follow the cursor anywhere on the page, not just over Pip.
+    function look(e: PointerEvent) {
+      if (reduced.matches) return;
+      const b = el!.getBoundingClientRect(),
+        dx = (e.clientX - (b.left + b.width / 2)) / window.innerWidth,
+        dy = (e.clientY - (b.top + b.height / 2)) / window.innerHeight;
+      lookY = Math.max(-0.6, Math.min(0.6, dx * 1.5));
+      lookX = Math.max(-0.3, Math.min(0.3, -dy * 0.9));
     }
-    setActive.current = (on) => {
-      wave = on ? 1 : 0;
-      targetX = on ? 0.12 : -0.08;
-      targetY = on ? -0.55 : -0.23;
-      if (on || !reduced.matches) until = performance.now() + 1600;
-      if (reduced.matches) {
-        hands[0].position.y = on ? -0.06 : -0.68;
-        character.rotation.set(targetX, targetY, -0.06);
-      }
-      draw();
+    function rest() {
+      lookX = -0.08;
+      lookY = -0.23;
+    }
+    control.current = {
+      active: (on) => {
+        wave = on;
+        draw();
+      },
+      cheer: () => {
+        hopAt = performance.now();
+        draw();
+      },
+      attention: (on) => {
+        attend = on;
+      },
     };
-    function leave() {
-      if (wave) return;
-      targetX = -0.08;
-      targetY = -0.23;
-      until = performance.now() + 700;
-      draw();
-    }
     function visibility() {
       if (document.hidden) {
         cancelAnimationFrame(frame);
         frame = 0;
       } else draw();
     }
-    el.addEventListener("pointermove", move);
-    el.addEventListener("pointerleave", leave);
+    window.addEventListener("pointermove", look, { passive: true });
+    document.documentElement.addEventListener("pointerleave", rest);
     document.addEventListener("visibilitychange", visibility);
     reduced.addEventListener("change", draw);
     draw();
     return () => {
-      setActive.current = () => {};
+      control.current = {
+        active: () => {},
+        cheer: () => {},
+        attention: () => {},
+      };
       cancelAnimationFrame(frame);
       resize.disconnect();
-      el.removeEventListener("pointermove", move);
-      el.removeEventListener("pointerleave", leave);
+      seen.disconnect();
+      window.removeEventListener("pointermove", look);
+      document.documentElement.removeEventListener("pointerleave", rest);
       document.removeEventListener("visibilitychange", visibility);
       reduced.removeEventListener("change", draw);
       scene.traverse((o) => {
@@ -243,7 +310,11 @@ export default function CompanionModel({
       delete el.dataset.rendered;
     };
   }, [hero]);
-  useEffect(() => setActive.current(active), [active]);
+  useEffect(() => control.current.active(active), [active]);
+  useEffect(() => control.current.attention(attention), [attention]);
+  useEffect(() => {
+    if (cheer) control.current.cheer();
+  }, [cheer]);
   return (
     <span
       ref={host}

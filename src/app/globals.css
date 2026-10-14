@@ -4149,3 +4149,34 @@ a.canvas-note {
 .workspace {
   overflow-x: clip;
 }
+/* Logo mark: cream app-icon tile on navy surfaces. */
+.logo-mark {
+  flex: none;
+}
+:is(.sidebar, .welcome-story) .brand .logo-mark {
+  width: 36px;
+  height: 36px;
+  padding: 5px;
+  background: var(--cream);
+  border-radius: 10px;
+  box-shadow: 2px 2px 0 #3a5aa0;
+  transform: rotate(-4deg);
+  transition: transform 0.2s;
+}
+:is(.sidebar, .welcome-story) .brand:hover .logo-mark {
+  transform: rotate(0);
+}
+.loading .brand .logo-mark {
+  width: 34px;
+  height: 34px;
+}
+.embedded .sidebar .brand .logo-mark,
+.sidebar .brand .logo-mark {
+  color: inherit;
+}
+@media (max-width: 900px) {
+  .sidebar .brand .logo-mark {
+    width: 38px;
+    height: 38px;
+  }
+}

@@ -11,6 +11,7 @@ import {
 } from "@/components/insights";
 import { memberBreakdown, teamHealth } from "@/lib/insights";
 import { Doodles } from "@/components/doodles";
+import { Logo } from "@/components/logo";
 import {
   CountUp,
   Ring,
@@ -41,7 +42,6 @@ import {
   RefreshCw,
   GraduationCap,
   LogOut,
-  Layers,
   MoreHorizontal,
   ExternalLink,
   Compass,
@@ -101,6 +101,7 @@ export default function Page() {
     [newTeam, setNewTeam] = useState(false),
     [editProject, setEditProject] = useState(false),
     [companion, setCompanion] = useState(false),
+    [cheer, setCheer] = useState(0),
     [dismissed, setDismissed] = useState(false);
   async function refresh() {
     try {
@@ -183,6 +184,7 @@ export default function Page() {
       if (!r.ok) throw Error(d.error);
       setS(d.state);
       setToast(message);
+      setCheer((n) => n + 1);
       return true;
     } catch (e) {
       setError((e as Error).message);
@@ -195,7 +197,7 @@ export default function Page() {
     return (
       <main className="loading">
         <div className="brand">
-          <Layers />
+          <Logo size={30} />
           TeamTrack
         </div>
         <span className="spinner" />
@@ -208,7 +210,7 @@ export default function Page() {
         <section className="welcome-story">
           <Doodles variant="welcome" />
           <div className="brand">
-            <Layers />
+            <Logo size={30} />
             TeamTrack
           </div>
           <div>
@@ -480,7 +482,7 @@ export default function Page() {
     <div className="app-shell">
       <aside className="sidebar">
         <Link className="brand" href="/" aria-label="TeamTrack home">
-          <Layers size={27} />
+          <Logo size={30} />
           TeamTrack
         </Link>
         <div className="course-switch">
@@ -630,7 +632,12 @@ export default function Page() {
                   aria-expanded={companion}
                   onClick={() => setCompanion(!companion)}
                 >
-                  <CompanionModel hero active={companion} />
+                  <CompanionModel
+                    hero
+                    active={companion}
+                    cheer={cheer}
+                    attention={todoCount > 0}
+                  />
                 </button>
                 {companion && (
                   <div
@@ -1342,7 +1349,7 @@ export default function Page() {
           </div>
           <footer className="workspace-footer">
             <span>
-              <Layers size={14} />
+              <Logo size={16} />
               Made for better teamwork.
             </span>
             <span>
@@ -1393,7 +1400,11 @@ export default function Page() {
             }
             aria-expanded={companion}
           >
-            <CompanionModel active={companion} />
+            <CompanionModel
+              active={companion}
+              cheer={cheer}
+              attention={todoCount > 0}
+            />
             {!companion && guide.some((g) => !g.done) && (
               <span className="pip-badge" aria-hidden="true">
                 {guide.filter((g) => !g.done).length}
