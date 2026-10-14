@@ -1,0 +1,1 @@
+Group projects, minus the guessing. TeamTrack lives inside Canvas: professors see which teams need a hand and why, students log real evidence of their work, and nothing is auto-graded. teamtrack-kappa.vercel.app

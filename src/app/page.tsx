@@ -379,13 +379,8 @@ export default function Page() {
     <>
       <button
         className="close"
-        aria-label="Hide Pip"
-        title="Hide Pip (you can bring Pip back from the footer)"
-        onClick={() => {
-          setDismissed(true);
-          setCompanion(false);
-          store("set");
-        }}
+        aria-label="Close Pip's panel"
+        onClick={() => setCompanion(false)}
       >
         <X size={14} />
       </button>
@@ -422,6 +417,16 @@ export default function Page() {
       <small className="pip-foot">
         Pip only reads what your team records. Nothing here is graded.
       </small>
+      <button
+        className="text-button pip-hide"
+        onClick={() => {
+          setDismissed(true);
+          setCompanion(false);
+          store("set");
+        }}
+      >
+        Hide Pip (bring it back from the footer)
+      </button>
     </>
   );
   const title: [string, string, string] =

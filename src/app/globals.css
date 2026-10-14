@@ -4180,3 +4180,11 @@ a.canvas-note {
     height: 38px;
   }
 }
+.pip-hide {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #6b7590;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  border-radius: 4px;
+}

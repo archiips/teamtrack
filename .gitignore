@@ -24,3 +24,7 @@ TeamTrack.pdf
 *.tsbuildinfo
 
 !.env.example
+
+# Demo video build output (large binaries)
+video/work/
+video/out/
