@@ -21,7 +21,6 @@ export async function GET(req: Request) {
               message_type: "LtiResourceLinkRequest",
               text: "TeamTrack",
               target_link_uri: base + "/api/lti/launch",
-              windowTarget: "_blank",
             },
           ],
         },

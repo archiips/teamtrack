@@ -2869,3 +2869,47 @@ textarea::placeholder {
   left: 62px;
   width: 260px;
 }
+/* Inside Canvas, collapse our rail so it doesn't compete with Canvas navigation. */
+.embedded .sidebar {
+  width: 76px;
+  padding: 24px 12px;
+}
+.embedded .sidebar .brand {
+  font-size: 0;
+  padding: 0;
+  justify-content: center;
+}
+.embedded .sidebar .brand svg {
+  width: 29px;
+  height: 29px;
+}
+.embedded
+  :is(
+    .course-switch,
+    .nav-label,
+    .sidebar-note,
+    .profile > div,
+    .profile > button
+  ) {
+  display: none;
+}
+.embedded nav {
+  margin-top: 40px;
+}
+.embedded nav button {
+  font-size: 0;
+  padding: 13px;
+  justify-content: center;
+}
+.embedded nav button svg {
+  flex-shrink: 0;
+}
+.embedded nav .nav-count {
+  display: none;
+}
+.embedded .profile {
+  justify-content: center;
+}
+.embedded .workspace {
+  margin-left: 76px;
+}

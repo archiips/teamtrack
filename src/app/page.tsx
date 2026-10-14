@@ -121,7 +121,11 @@ export default function Page() {
           setNamespace(d.namespace || "demo");
           setTeamId(d.state.teams[0]?.id || "");
         }
-        setDismissed(localStorage.getItem("tt-companion-dismissed") === "yes");
+        document.documentElement.classList.toggle(
+          "embedded",
+          window.self !== window.top,
+        );
+        setDismissed(store("get") === "yes");
       })
       .catch(() => setError("Cannot connect. Please retry."))
       .finally(() => setLoading(false));
@@ -406,6 +410,7 @@ export default function Page() {
           {nav.map((n) => (
             <button
               key={n.id}
+              title={n.name}
               className={view === n.id ? "active" : ""}
               onClick={() => {
                 setView(n.id);
@@ -1212,7 +1217,7 @@ export default function Page() {
                   className="text-button"
                   onClick={() => {
                     setDismissed(false);
-                    localStorage.removeItem("tt-companion-dismissed");
+                    store("remove");
                   }}
                 >
                   Bring back Pip
@@ -1250,7 +1255,7 @@ export default function Page() {
                 onClick={() => {
                   setDismissed(true);
                   setCompanion(false);
-                  localStorage.setItem("tt-companion-dismissed", "yes");
+                  store("set");
                 }}
               >
                 <X size={14} />
@@ -1943,4 +1948,15 @@ function TaskDrawer({
       </div>
     </dialog>
   );
+}
+
+// Storage can be blocked in third-party iframes (e.g. inside Canvas).
+function store(op: "get" | "set" | "remove") {
+  try {
+    const key = "tt-companion-dismissed";
+    if (op === "get") return localStorage.getItem(key);
+    if (op === "set") localStorage.setItem(key, "yes");
+    else localStorage.removeItem(key);
+  } catch {}
+  return null;
 }
