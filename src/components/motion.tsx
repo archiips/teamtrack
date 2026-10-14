@@ -55,6 +55,22 @@ export function Ring({ pct }: { pct: number }) {
 
 const SPOT = ".spot, .panel, .stats > div, .board-card, .profiles button";
 
+/**
+ * Entrance animations start from an invisible frame and do not advance in
+ * hidden tabs, so they are enabled only once the page is actually visible.
+ */
+export function useMotionGate() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const update = () => {
+      if (!document.hidden && !reduced()) root.classList.add("motion-ok");
+    };
+    update();
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
+}
+
 /** Feeds the cursor position to `.spot` cards for a soft glow that follows it. */
 export function useSpotlight() {
   useEffect(() => {

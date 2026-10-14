@@ -10,7 +10,12 @@ import {
   mixLabel,
 } from "@/components/insights";
 import { memberBreakdown, teamHealth } from "@/lib/insights";
-import { CountUp, Ring, useSpotlight } from "@/components/motion";
+import {
+  CountUp,
+  Ring,
+  useMotionGate,
+  useSpotlight,
+} from "@/components/motion";
 const CompanionModel = dynamic(() => import("@/components/companion-model"), {
   ssr: false,
 });
@@ -118,6 +123,7 @@ export default function Page() {
     }
   }
   useSpotlight();
+  useMotionGate();
   useEffect(() => {
     fetch("/api/workspace")
       .then(async (r) => {

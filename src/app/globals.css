@@ -3475,6 +3475,8 @@ a.canvas-note strong {
   stroke: var(--green);
   stroke-linecap: round;
   transition: stroke-dashoffset 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.motion-ok .ring-fill {
   animation: ring-in 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .ring text {
@@ -3493,6 +3495,8 @@ a.canvas-note strong {
 .status-bar i,
 .progress i {
   transform-origin: left;
+}
+.motion-ok :is(.status-bar, .progress) i {
   animation: grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 .status-bar i:nth-child(2) {
@@ -3507,7 +3511,7 @@ a.canvas-note strong {
   }
 }
 /* View transitions. */
-.view-enter {
+.motion-ok .view-enter {
   animation: view-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 @keyframes view-in {
