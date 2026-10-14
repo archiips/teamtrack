@@ -13,6 +13,7 @@ export type Team = {
   agreement: string;
   agreementVersion: number;
   accepted: string[];
+  agreementHistory?: { version: number; body: string; accepted: string[] }[];
 };
 export type Task = {
   id: string;
@@ -37,6 +38,7 @@ export type Entry = {
   version?: number;
 };
 export type Event = {
+  entityId?: string;
   id: string;
   teamId: string;
   actorId: string;
@@ -44,6 +46,8 @@ export type Event = {
   at: string;
 };
 export type State = {
+  checkpoints?: { id: string; title: string; due: string }[];
+  integration?: { lastSync: string | null; error: string | null };
   version: number;
   course: string;
   project: string;

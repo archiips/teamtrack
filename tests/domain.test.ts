@@ -43,6 +43,7 @@ describe("team access and work history", () => {
     });
     s = apply(s, "s1", {
       type: "agreement.publish",
+      version: 1,
       teamId: "t1",
       body: "Meet every Tuesday and record work.",
     });
@@ -106,4 +107,60 @@ it("preserves a correction record and rejects another author", () => {
     "Corrected interview notes",
   );
   expect(s.events[0].body).toContain("Completed two interviews");
+});
+it("retains previous agreement text and accepts only the expected version", () => {
+  const old = seed();
+  const s = apply(old, "s1", {
+    type: "agreement.publish",
+    teamId: "t1",
+    body: "Updated agreement",
+    version: 1,
+  });
+  expect(s.teams[0].agreementHistory?.[0].body).toBe(old.teams[0].agreement);
+  expect(s.teams[0].agreementHistory?.[0].accepted).toEqual(["s2", "s3", "s4"]);
+  expect(() =>
+    apply(s, "s2", {
+      type: "agreement.publish",
+      teamId: "t1",
+      body: "Stale edit",
+      version: 1,
+    }),
+  ).toThrow("changed");
+});
+it("keeps stable task history after a rename", () => {
+  const s = apply(seed(), "s1", {
+    type: "task.update",
+    id: "k1",
+    version: 1,
+    title: "Renamed task",
+  });
+  expect(s.events[0].entityId).toBe("k1");
+});
+it("revokes access for inactive course members", () => {
+  const s = seed();
+  s.users.find((u) => u.id === "s1")!.active = false;
+  expect(() => visible(s, "s1")).toThrow("Access denied");
+  expect(() =>
+    apply(s, "s1", {
+      type: "task.update",
+      id: "k1",
+      version: 1,
+      status: "done",
+    }),
+  ).toThrow("Access denied");
+});
+it("lets only instructors create dated project checkpoints", () => {
+  expect(() =>
+    apply(seed(), "s1", {
+      type: "checkpoint.create",
+      title: "Pilot review",
+      due: "2026-10-25",
+    }),
+  ).toThrow("Instructor");
+  const s = apply(seed(), "p1", {
+    type: "checkpoint.create",
+    title: "Pilot review",
+    due: "2026-10-25",
+  });
+  expect(s.checkpoints?.at(-1)?.title).toBe("Pilot review");
 });

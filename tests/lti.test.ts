@@ -36,3 +36,17 @@ it("extracts course and verified instructor role", () =>
     courseId: "course-1",
     role: "instructor",
   }));
+import { assertRegistration } from "../src/lib/lti";
+it("uses the Canvas global client ID and rejects the local database ID", () => {
+  const r = {
+    issuer: "https://canvas.example",
+    clientId: "10000000000001",
+    deploymentId: "d",
+    authUrl: "https://canvas.example/auth",
+    tokenUrl: "https://canvas.example/token",
+    jwksUrl: "https://canvas.example/keys",
+    origin: "https://canvas.example",
+  };
+  expect(() => assertRegistration(r, r.issuer, "1")).toThrow("Unregistered");
+  expect(() => assertRegistration(r, r.issuer, "10000000000001")).not.toThrow();
+});

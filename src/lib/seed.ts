@@ -7,6 +7,9 @@ export function seed(): State {
     return d.toISOString().slice(0, 10);
   };
   return {
+    checkpoints: ["Discover", "Define", "Prototype", "Share"].map(
+      (title, i) => ({ id: "cp" + i, title, due: date(i * 3 + 2) }),
+    ),
     version: 1,
     course: "CSS 474 · Product development lab",
     project: "Campus, without barriers",

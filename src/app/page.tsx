@@ -2,6 +2,10 @@
 import { today } from "@/lib/dates";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+const CompanionModel = dynamic(() => import("@/components/companion-model"), {
+  ssr: false,
+});
 import {
   ArrowUpRight,
   ArrowRight,
@@ -201,15 +205,10 @@ export default function Page() {
               keep your team moving.
             </p>
             <div className="welcome-art">
-              <div className="orbit o1" />
-              <div className="orbit o2" />
-              <div className="orb">
-                <Compass size={70} strokeWidth={1} />
-              </div>
-              <span className="satellite">
-                <Check size={20} />
+              <CompanionModel hero />
+              <span className="art-label">
+                Meet Pip. A little help, always nearby.
               </span>
-              <span className="art-label">Everyone has a part to play.</span>
             </div>
           </div>
           <span className="welcome-foot">
@@ -329,8 +328,12 @@ export default function Page() {
         <div className="course-switch">
           <GraduationCap size={20} />
           <div>
-            <strong>Product development</strong>
-            <small>Fall 2026 · CSS 474</small>
+            <strong>
+              {namespace === "demo" ? "Product development" : s.course}
+            </strong>
+            <small>
+              {namespace === "demo" ? "Fall 2026 · CSS 474" : "Canvas course"}
+            </small>
           </div>
           <ChevronDown size={15} />
         </div>
@@ -474,6 +477,26 @@ export default function Page() {
               {error}
               <button onClick={() => setError("")} aria-label="Dismiss error">
                 <X size={16} />
+              </button>
+            </div>
+          )}
+          {prof && namespace !== "demo" && (
+            <div className="roster-status">
+              <span>
+                {s.integration?.error ||
+                  (s.integration?.lastSync
+                    ? `Roster synced ${new Date(s.integration.lastSync).toLocaleString()}`
+                    : "Roster has not synced yet")}
+              </span>
+              <button
+                className="secondary"
+                disabled={busy}
+                onClick={() =>
+                  command({ type: "roster.sync" }, "Canvas roster synchronized")
+                }
+              >
+                <RefreshCw size={14} />
+                Sync Canvas roster
               </button>
             </div>
           )}
@@ -984,6 +1007,27 @@ export default function Page() {
                       Accept this agreement
                     </button>
                   ))}
+                {team.agreementHistory?.length ? (
+                  <details className="agreement-edit">
+                    <summary>Previous versions</summary>
+                    {team.agreementHistory.map((h) => (
+                      <div key={h.version}>
+                        <h3>Version {h.version}</h3>
+                        <p style={{ whiteSpace: "pre-wrap" }}>{h.body}</p>
+                        <p>
+                          Accepted by:{" "}
+                          {h.accepted
+                            .map(
+                              (id) =>
+                                s.users.find((u) => u.id === id)?.name ||
+                                "Former member",
+                            )
+                            .join(", ") || "No acceptances recorded"}
+                        </p>
+                      </div>
+                    ))}
+                  </details>
+                ) : null}
                 <details className="agreement-edit">
                   <summary>Update our agreement</summary>
                   <p>
@@ -1001,6 +1045,7 @@ export default function Page() {
                         await command(
                           {
                             type: "agreement.publish",
+                            version: team.agreementVersion,
                             teamId: team.id,
                             body: f.get("body"),
                           },
@@ -1123,7 +1168,7 @@ export default function Page() {
               >
                 <X size={14} />
               </button>
-              <strong>A little nudge?</strong>
+              <strong>Hey, I’m Pip.</strong>
               <p>
                 {team && !team.accepted.includes(userId) && !prof
                   ? "Your team agreement is waiting for you. Start there, then pick your next task."
@@ -1146,11 +1191,7 @@ export default function Page() {
             onClick={() => setCompanion(!companion)}
             aria-label="Open TeamTrack companion"
           >
-            <span className="eyes">
-              <i />
-              <i />
-            </span>
-            <span className="smile" />
+            <CompanionModel />
           </button>
         </div>
       )}
@@ -1230,7 +1271,14 @@ export default function Page() {
             <label>
               Checkpoint
               <select name="checkpoint">
-                {["Discover", "Define", "Prototype", "Share"].map((x) => (
+                {(
+                  s.checkpoints?.map((c) => c.title) || [
+                    "Discover",
+                    "Define",
+                    "Prototype",
+                    "Share",
+                  ]
+                ).map((x) => (
                   <option key={x}>{x}</option>
                 ))}
               </select>
@@ -1355,6 +1403,52 @@ export default function Page() {
               Save project
             </button>
           </form>
+          <div className="checkpoint-editor">
+            <h3>Project checkpoints</h3>
+            {s.checkpoints?.map((cp) => (
+              <p key={cp.id}>
+                {cp.title}
+                <span>{date(cp.due)}</span>
+              </p>
+            ))}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const f = new FormData(form);
+                if (
+                  await command(
+                    {
+                      type: "checkpoint.create",
+                      title: f.get("checkpointTitle"),
+                      due: f.get("checkpointDue"),
+                    },
+                    "Checkpoint created",
+                  )
+                )
+                  form.reset();
+              }}
+            >
+              <div className="form-grid">
+                <label>
+                  New checkpoint
+                  <input
+                    name="checkpointTitle"
+                    required
+                    maxLength={120}
+                    placeholder="Pilot review"
+                  />
+                </label>
+                <label>
+                  Due date
+                  <input name="checkpointDue" type="date" required />
+                </label>
+              </div>
+              <button className="secondary" disabled={busy}>
+                Add checkpoint
+              </button>
+            </form>
+          </div>
         </Modal>
       )}
     </div>
@@ -1727,7 +1821,7 @@ function TaskDrawer({
         <details className="task-history">
           <summary>Task history</summary>
           {s.events
-            .filter((e) => e.body.includes(task.title))
+            .filter((e) => e.entityId === task.id)
             .map((e) => (
               <p key={e.id}>
                 {s.users.find((u) => u.id === e.actorId)?.name}: {e.body}

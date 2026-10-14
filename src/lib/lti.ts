@@ -59,8 +59,7 @@ export async function beginLaunch(
   messageHint: string | undefined,
 ) {
   const r = registration();
-  if (issuer !== r.issuer || (clientId && clientId !== r.clientId))
-    throw Error("Unregistered Canvas platform");
+  assertRegistration(r, issuer, clientId);
   if (!sql) throw Error("Database required");
   await init();
   await sql`CREATE TABLE IF NOT EXISTS teamtrack_launch (state text PRIMARY KEY, nonce text NOT NULL, expires_at timestamptz NOT NULL)`;
@@ -124,6 +123,7 @@ export async function finishLaunch(state: string, token: string) {
       .slice(0, 2)
       .join(""),
     color: "blue",
+    active: true,
   };
   await init();
   await sql.begin(async (tx) => {
@@ -133,6 +133,8 @@ export async function finishLaunch(state: string, token: string) {
         "Canvas course",
     );
     fresh.project = "Your team project";
+    fresh.description =
+      "Set your project brief, form teams and agree on the next checkpoint.";
     fresh.users = [];
     fresh.teams = [];
     fresh.tasks = [];
@@ -150,12 +152,12 @@ export async function finishLaunch(state: string, token: string) {
   const nrps = payload[
     "https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice"
   ] as { context_memberships_url?: string } | undefined;
-  if (v.role === "instructor" && nrps?.context_memberships_url)
-    await syncCanvasRoster(namespace, nrps.context_memberships_url).catch(
-      () => {
-        /* Launch remains usable; explicit sync reports failure. */
-      },
-    );
+  await courseMetadataTable();
+  if (v.role === "instructor") {
+    await sql`INSERT INTO teamtrack_course (namespace,membership_url,error) VALUES (${namespace},${nrps?.context_memberships_url || null},${nrps?.context_memberships_url ? null : "Canvas has not granted roster permission. Enable readonly Names and Roles access."}) ON CONFLICT(namespace) DO UPDATE SET membership_url=EXCLUDED.membership_url`;
+    if (nrps?.context_memberships_url)
+      await requestRosterSync(namespace).catch(() => {});
+  }
   return { namespace, userId };
 }
 export async function syncCanvasRoster(
@@ -249,4 +251,49 @@ export async function syncCanvasRoster(
     await tx`UPDATE teamtrack_state SET data=${tx.json(s)} WHERE id=${namespace}`;
   });
   return members.length;
+}
+
+async function courseMetadataTable() {
+  if (!sql) throw Error("Database required");
+  await sql`CREATE TABLE IF NOT EXISTS teamtrack_course (namespace text PRIMARY KEY, membership_url text, last_sync timestamptz, error text, syncing boolean NOT NULL DEFAULT false, started_at timestamptz)`;
+}
+export async function integrationStatus(namespace: string) {
+  await courseMetadataTable();
+  if (!sql) throw Error("Database required");
+  const rows =
+    await sql`SELECT last_sync,error FROM teamtrack_course WHERE namespace=${namespace}`;
+  return {
+    lastSync: rows[0]?.last_sync
+      ? new Date(rows[0].last_sync).toISOString()
+      : null,
+    error: rows[0]?.error || null,
+  };
+}
+export async function requestRosterSync(namespace: string) {
+  await courseMetadataTable();
+  if (!sql) throw Error("Database required");
+  const rows =
+    await sql`UPDATE teamtrack_course SET syncing=true,started_at=now() WHERE namespace=${namespace} AND (syncing=false OR started_at<now()-interval '5 minutes') RETURNING membership_url`;
+  if (!rows.length)
+    throw Error("Roster sync is already running. Try again shortly.");
+  try {
+    if (!rows[0].membership_url)
+      throw Error("Canvas has not granted roster permission.");
+    const count = await syncCanvasRoster(namespace, rows[0].membership_url);
+    await sql`UPDATE teamtrack_course SET last_sync=now(),error=null,syncing=false WHERE namespace=${namespace}`;
+    return count;
+  } catch (e) {
+    const error = e instanceof Error ? e.message : "Roster sync failed";
+    await sql`UPDATE teamtrack_course SET error=${error},syncing=false WHERE namespace=${namespace}`;
+    throw e;
+  }
+}
+
+export function assertRegistration(
+  r: Registration,
+  issuer: string,
+  clientId: string | undefined,
+) {
+  if (issuer !== r.issuer || (clientId && clientId !== r.clientId))
+    throw Error("Unregistered Canvas platform");
 }

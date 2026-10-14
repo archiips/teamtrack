@@ -54,10 +54,11 @@ export function apply(original: State, actorId: string, c: Command): State {
       throw Error("Access denied");
     return t;
   };
-  const event = (teamId: string, body: string) =>
+  const event = (teamId: string, body: string, entityId?: string) =>
     s.events.unshift({
       id: crypto.randomUUID(),
       teamId,
+      entityId,
       actorId,
       body,
       at: new Date().toISOString(),
@@ -98,6 +99,7 @@ export function apply(original: State, actorId: string, c: Command): State {
     event(
       t.teamId,
       `${t.status === "done" ? "Completed" : "Updated"} “${t.title}”`,
+      t.id,
     );
   } else if (c.type === "task.create") {
     const team = access(c.teamId);
@@ -123,7 +125,7 @@ export function apply(original: State, actorId: string, c: Command): State {
       version: 1,
     };
     s.tasks.push(t);
-    event(team.id, `Created “${t.title}”`);
+    event(team.id, `Created “${t.title}”`, t.id);
   } else if (c.type === "contribution.add" || c.type === "comment.add") {
     const t = s.tasks.find((x) => x.id === c.taskId);
     if (!t) throw Error("Access denied");
@@ -132,7 +134,8 @@ export function apply(original: State, actorId: string, c: Command): State {
     if (url) {
       try {
         const parsed = new URL(url);
-        if (parsed.protocol !== "https:") throw Error();
+        if (parsed.protocol !== "https:" || parsed.username || parsed.password)
+          throw Error();
       } catch {
         throw Error("Evidence links must use HTTPS");
       }
@@ -149,6 +152,7 @@ export function apply(original: State, actorId: string, c: Command): State {
     event(
       t.teamId,
       `${c.type === "comment.add" ? "Commented on" : "Added evidence to"} “${t.title}”`,
+      t.id,
     );
   } else if (c.type === "contribution.update") {
     const entry = s.entries.find((e) => e.id === c.id);
@@ -165,6 +169,7 @@ export function apply(original: State, actorId: string, c: Command): State {
     event(
       task.teamId,
       `Corrected update on “${task.title}”. Previous text: ${previous}`,
+      task.id,
     );
   } else if (c.type === "agreement.accept") {
     const t = access(c.teamId);
@@ -178,6 +183,14 @@ export function apply(original: State, actorId: string, c: Command): State {
     }
   } else if (c.type === "agreement.publish") {
     const t = access(c.teamId);
+    if (t.agreementVersion !== c.version)
+      throw Error("This agreement changed. Reload before publishing.");
+    t.agreementHistory ??= [];
+    t.agreementHistory.push({
+      version: t.agreementVersion,
+      body: t.agreement,
+      accepted: [...t.accepted],
+    });
     t.agreement = text(c.body, 12000);
     t.agreementVersion++;
     t.accepted = [];
@@ -191,8 +204,9 @@ export function apply(original: State, actorId: string, c: Command): State {
       !memberIds.length ||
       memberIds.some(
         (id) =>
-          !s.users.some((x) => x.id === id && x.role === "student") ||
-          s.teams.some((t) => t.memberIds.includes(id)),
+          !s.users.some(
+            (x) => x.id === id && x.role === "student" && x.active !== false,
+          ) || s.teams.some((t) => t.memberIds.includes(id)),
       )
     )
       throw Error("Choose unassigned enrolled students");
@@ -207,6 +221,20 @@ export function apply(original: State, actorId: string, c: Command): State {
     };
     s.teams.push(t);
     event(t.id, `Created team “${t.name}”`);
+  } else if (c.type === "checkpoint.create") {
+    instructor();
+    const title = text(c.title, 120);
+    if (s.checkpoints?.some((x) => x.title === title))
+      throw Error("Checkpoint already exists");
+    if (
+      typeof c.due !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(c.due) ||
+      !Number.isFinite(Date.parse(c.due))
+    )
+      throw Error("Choose a due date");
+    s.checkpoints ??= [];
+    s.checkpoints.push({ id: crypto.randomUUID(), title, due: c.due });
+    event(s.teams[0]?.id || "", `Created checkpoint “${title}”`);
   } else if (c.type === "project.update") {
     instructor();
     s.project = text(c.title, 120);
