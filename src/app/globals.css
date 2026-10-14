@@ -2562,3 +2562,310 @@ textarea::placeholder {
     margin-top: 10px;
   }
 }
+
+/* ---- Demo polish: references from 21st.dev bento stats + Uiverse tactile buttons (original CSS) ---- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.sidebar :where(button, a):focus-visible,
+.welcome-story :where(button, a):focus-visible {
+  outline-color: var(--cream);
+}
+
+/* Tactile buttons: a firm bottom edge that compresses on press. */
+.primary {
+  box-shadow:
+    0 3px 0 var(--ink),
+    0 6px 14px #0d1c421f;
+}
+.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 0 var(--ink),
+    0 9px 18px #0d1c4224;
+}
+.primary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 var(--ink),
+    0 3px 8px #0d1c421a;
+}
+.secondary {
+  box-shadow: 0 2px 0 #dfe3ec;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    background 0.12s;
+}
+.secondary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #dfe3ec;
+}
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Segmented filter control. */
+.tabs {
+  gap: 4px;
+  background: #f0f2f8;
+  padding: 4px;
+  border-radius: 9px;
+}
+.tabs button {
+  padding: 7px 13px;
+  border-radius: 6px;
+  color: #6b7389;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+}
+.tabs button:hover {
+  color: var(--ink);
+}
+.tabs button.selected {
+  background: white;
+  color: var(--navy);
+  box-shadow:
+    0 1px 2px #0d1c4214,
+    0 0 0 1px #e3e7f0;
+}
+.tabs button.selected:after {
+  display: none;
+}
+
+/* Navy hero stat tile with a quiet diagonal texture. */
+.stats > .hero-stat {
+  background:
+    repeating-linear-gradient(135deg, #ffffff07 0 1px, transparent 1px 11px),
+    linear-gradient(150deg, var(--blue), var(--navy) 70%);
+  border-color: var(--navy);
+  color: white;
+}
+.stats > .hero-stat > span,
+.stats > .hero-stat > small {
+  color: #c9d2e8;
+}
+.stats > .hero-stat strong {
+  color: var(--cream);
+}
+.stats > .hero-stat strong small {
+  color: #8f9cc0;
+}
+.stats > .hero-stat .progress {
+  background: #ffffff1f;
+}
+.stats > .hero-stat .progress i {
+  background: var(--cream);
+}
+
+/* Pip: a docked, unobtrusive companion. */
+.main {
+  padding-bottom: 96px;
+}
+.companion-wrap {
+  bottom: 18px;
+  right: 18px;
+}
+.companion {
+  position: relative;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, var(--blue), var(--navy) 72%);
+  border: 3px solid var(--cream);
+  box-shadow:
+    0 4px 0 #d9caa0,
+    0 10px 26px #01073633;
+  filter: none;
+  overflow: visible;
+  transition:
+    transform 0.18s,
+    box-shadow 0.18s;
+}
+.companion .companion-model {
+  position: absolute;
+  inset: -14px -8px -4px;
+  width: auto;
+  height: auto;
+}
+.companion:hover {
+  transform: translateY(-3px);
+}
+.companion:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 #d9caa0,
+    0 5px 14px #01073633;
+}
+.companion.open {
+  box-shadow:
+    0 4px 0 #d9caa0,
+    0 0 0 6px #fcf1d055,
+    0 10px 26px #01073633;
+}
+.companion .model-fallback {
+  width: 58%;
+  height: 58%;
+  top: 30%;
+  left: 21%;
+  font-size: 18px;
+  letter-spacing: 6px;
+}
+.pip-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  border-radius: 11px;
+  background: var(--cream);
+  color: var(--ink);
+  border: 2px solid var(--navy);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 17px;
+  text-align: center;
+}
+.companion-pop {
+  bottom: 96px;
+  right: 0;
+  width: min(310px, calc(100vw - 32px));
+  padding: 20px 20px 16px;
+  border-radius: 14px;
+  border-color: #e7e2d2;
+  box-shadow:
+    0 2px 0 #eadfbf,
+    0 18px 45px #0107362b;
+  animation: pip-in 0.16s ease-out;
+  transform-origin: bottom right;
+}
+.companion-pop > strong {
+  font-size: 16px;
+  color: var(--ink);
+}
+.companion-pop > p {
+  font-size: 13px;
+  color: #5f687e;
+  margin: 6px 0 12px;
+}
+.pip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.pip-list button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  background: #f7f8fc;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 11px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.pip-list button:hover {
+  background: #fcf6e6;
+  border-color: #eadfbf;
+}
+.pip-list button > span:nth-child(2) {
+  flex: 1;
+}
+.pip-list button > svg {
+  color: #8a94aa;
+}
+.pip-check {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #b8c1d6;
+  display: grid;
+  place-items: center;
+}
+.pip-list .done .pip-check {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.pip-list .done button {
+  color: #5f687e;
+  font-weight: 550;
+}
+.pip-foot {
+  display: block;
+  margin-top: 12px;
+  font-size: 11px;
+  color: #8a94a8;
+}
+.workspace-footer .text-button {
+  font-size: 12px;
+  color: var(--blue);
+  margin-right: 14px;
+  border-radius: 4px;
+}
+@keyframes pip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+@media (max-width: 650px) {
+  .companion {
+    width: 62px;
+    height: 62px;
+  }
+  .companion-wrap {
+    right: 12px;
+    bottom: 12px;
+  }
+  .companion-pop {
+    bottom: 80px;
+  }
+  .main {
+    padding-bottom: 90px;
+  }
+  .tabs {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .companion:hover,
+  .primary:hover:not(:disabled) {
+    transform: none;
+  }
+}
+.welcome-art .art-label {
+  bottom: -18px;
+  left: 62px;
+  width: 260px;
+}

@@ -4,8 +4,15 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 /** Original TeamTrack character. No downloaded models or external texture requests. */
-export default function CompanionModel({ hero = false }: { hero?: boolean }) {
+export default function CompanionModel({
+  hero = false,
+  active = false,
+}: {
+  hero?: boolean;
+  active?: boolean;
+}) {
   const host = useRef<HTMLSpanElement>(null);
+  const setActive = useRef<(on: boolean) => void>(() => {});
   useEffect(() => {
     const el = host.current;
     if (!el) return;
@@ -70,6 +77,7 @@ export default function CompanionModel({ hero = false }: { hero?: boolean }) {
     );
     body.position.set(0, -0.74, -0.02);
     character.add(body);
+    const hands: THREE.Mesh[] = [];
     for (const x of [-0.32, 0.32]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.105, 20, 16), navy);
       eye.scale.set(0.77, 1.2, 0.4);
@@ -94,6 +102,7 @@ export default function CompanionModel({ hero = false }: { hero?: boolean }) {
       );
       hand.position.set(x * 2.55, -0.68, 0.1);
       character.add(hand);
+      hands.push(hand);
     }
     const smile = new THREE.Mesh(
       new THREE.TorusGeometry(0.16, 0.025, 8, 24, Math.PI),
@@ -145,7 +154,8 @@ export default function CompanionModel({ hero = false }: { hero?: boolean }) {
     let frame = 0,
       until = performance.now() + 3500,
       targetX = -0.08,
-      targetY = -0.23;
+      targetY = -0.23,
+      wave = 0;
     function render(now: number) {
       frame = 0;
       if (document.hidden) return;
@@ -154,11 +164,18 @@ export default function CompanionModel({ hero = false }: { hero?: boolean }) {
       character.rotation.x += (targetX - character.rotation.x) * 0.07;
       character.rotation.z = -0.06;
       character.position.y = motion ? Math.sin(now * 0.0018) * 0.055 : 0;
+      // Raise the left hand (viewer's left, toward the panel) while active.
+      const lift = wave
+        ? 0.62 + (motion ? Math.sin(now * 0.012) * 0.06 : 0)
+        : 0;
+      hands[0].position.y += (-0.68 + lift - hands[0].position.y) * 0.15;
       renderer.render(scene, camera);
       if (motion) frame = requestAnimationFrame(render);
     }
     function draw() {
-      if (!frame) frame = requestAnimationFrame(render);
+      // rAF never fires in hidden tabs, so paint a still frame immediately.
+      if (document.hidden) renderer.render(scene, camera);
+      else if (!frame) frame = requestAnimationFrame(render);
     }
     const resize = new ResizeObserver(() => {
       const w = el!.clientWidth,
@@ -177,7 +194,19 @@ export default function CompanionModel({ hero = false }: { hero?: boolean }) {
       until = performance.now() + 1500;
       draw();
     }
+    setActive.current = (on) => {
+      wave = on ? 1 : 0;
+      targetX = on ? 0.12 : -0.08;
+      targetY = on ? -0.55 : -0.23;
+      if (on || !reduced.matches) until = performance.now() + 1600;
+      if (reduced.matches) {
+        hands[0].position.y = on ? -0.06 : -0.68;
+        character.rotation.set(targetX, targetY, -0.06);
+      }
+      draw();
+    };
     function leave() {
+      if (wave) return;
       targetX = -0.08;
       targetY = -0.23;
       until = performance.now() + 700;
@@ -195,6 +224,7 @@ export default function CompanionModel({ hero = false }: { hero?: boolean }) {
     reduced.addEventListener("change", draw);
     draw();
     return () => {
+      setActive.current = () => {};
       cancelAnimationFrame(frame);
       resize.disconnect();
       el.removeEventListener("pointermove", move);
@@ -213,6 +243,7 @@ export default function CompanionModel({ hero = false }: { hero?: boolean }) {
       delete el.dataset.rendered;
     };
   }, [hero]);
+  useEffect(() => setActive.current(active), [active]);
   return (
     <span
       ref={host}

@@ -282,6 +282,70 @@ export default function Page() {
     { id: "agreement", name: "Team agreement", icon: FileCheck2 },
     { id: "activity", name: "Activity", icon: Activity },
   ] as const;
+  const open = all.filter((t) => t.status !== "done"),
+    guide: {
+      label: string;
+      done: boolean;
+      view: (typeof nav)[number]["id"];
+      filter?: string;
+    }[] = prof
+      ? [
+          {
+            label: blocked
+              ? `${blocked} blocked task${blocked === 1 ? "" : "s"} could use a hand`
+              : "No blocked tasks right now",
+            done: !blocked,
+            view: "overview",
+          },
+          {
+            label: s.teams.every((t) =>
+              t.memberIds.every((m) => t.accepted.includes(m)),
+            )
+              ? "Every team agreement is accepted"
+              : "Some members haven’t accepted their agreement",
+            done: s.teams.every((t) =>
+              t.memberIds.every((m) => t.accepted.includes(m)),
+            ),
+            view: "team",
+          },
+          {
+            label: s.users.some(
+              (u) =>
+                u.role === "student" &&
+                !s.teams.some((t) => t.memberIds.includes(u.id)),
+            )
+              ? "Some students still need a team"
+              : "Every student has a team",
+            done: !s.users.some(
+              (u) =>
+                u.role === "student" &&
+                !s.teams.some((t) => t.memberIds.includes(u.id)),
+            ),
+            view: "team",
+          },
+        ]
+      : [
+          {
+            label: "Accept your team agreement",
+            done: !!team && team.accepted.includes(userId),
+            view: "agreement",
+          },
+          {
+            label: open.some((t) => t.ownerId === userId)
+              ? `Move your ${open.filter((t) => t.ownerId === userId).length} open task${open.filter((t) => t.ownerId === userId).length === 1 ? "" : "s"} forward`
+              : "Pick up a task",
+            done: false,
+            view: "tasks",
+            filter: "mine",
+          },
+          {
+            label: blocked
+              ? "Help clear a team blocker"
+              : "No blockers on your team",
+            done: !blocked,
+            view: "tasks",
+          },
+        ];
   function taskRow(t: Task) {
     const owner = s!.users.find((u) => u.id === t.ownerId);
     return (
@@ -543,7 +607,7 @@ export default function Page() {
           {view === "overview" && (
             <>
               <div className="stats">
-                <div>
+                <div className="hero-stat">
                   <span>Work completed</span>
                   <strong>
                     {done}
@@ -1143,7 +1207,19 @@ export default function Page() {
               Made for better teamwork.
             </span>
             <span>
-              TeamTrack <span className="dot">·</span> Class demo
+              {dismissed && (
+                <button
+                  className="text-button"
+                  onClick={() => {
+                    setDismissed(false);
+                    localStorage.removeItem("tt-companion-dismissed");
+                  }}
+                >
+                  Bring back Pip
+                </button>
+              )}
+              TeamTrack <span className="dot">·</span>{" "}
+              {namespace === "demo" ? "Class demo" : "Canvas course"}
             </span>
           </footer>
         </main>
@@ -1155,14 +1231,25 @@ export default function Page() {
         </div>
       )}
       {!dismissed && (
-        <div className="companion-wrap">
+        <div
+          className="companion-wrap"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setCompanion(false);
+          }}
+        >
           {companion && (
-            <div className="companion-pop">
+            <div
+              className="companion-pop"
+              role="dialog"
+              aria-label="Pip, your TeamTrack guide"
+            >
               <button
                 className="close"
-                aria-label="Dismiss companion"
+                aria-label="Hide Pip"
+                title="Hide Pip (you can bring Pip back from the footer)"
                 onClick={() => {
                   setDismissed(true);
+                  setCompanion(false);
                   localStorage.setItem("tt-companion-dismissed", "yes");
                 }}
               >
@@ -1170,28 +1257,53 @@ export default function Page() {
               </button>
               <strong>Hey, I’m Pip.</strong>
               <p>
-                {team && !team.accepted.includes(userId) && !prof
-                  ? "Your team agreement is waiting for you. Start there, then pick your next task."
-                  : "Open a task, share what you learned, and raise a blocker if you need a hand."}
+                {prof
+                  ? "Here’s where a little support could help right now."
+                  : "A few small steps to keep your team moving."}
               </p>
-              <button
-                className="text-button"
-                onClick={() => {
-                  setView("agreement");
-                  setCompanion(false);
-                }}
-              >
-                See team agreement
-                <ArrowRight size={14} />
-              </button>
+              <ul className="pip-list">
+                {guide.map((g) => (
+                  <li key={g.label} className={g.done ? "done" : ""}>
+                    <button
+                      onClick={() => {
+                        setView(g.view);
+                        if (g.filter) setFilter(g.filter);
+                        setCompanion(false);
+                      }}
+                    >
+                      <span className="pip-check" aria-hidden="true">
+                        {g.done && <Check size={11} />}
+                      </span>
+                      <span>
+                        {g.label}
+                        <span className="sr-only">
+                          {g.done ? " (done)" : " (to do)"}
+                        </span>
+                      </span>
+                      <ChevronRight size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <small className="pip-foot">
+                Pip only reads what your team records. Nothing here is graded.
+              </small>
             </div>
           )}
           <button
-            className="companion"
+            className={`companion ${companion ? "open" : ""}`}
             onClick={() => setCompanion(!companion)}
-            aria-label="Open TeamTrack companion"
+            aria-label={
+              companion ? "Close Pip" : "Open Pip, your TeamTrack guide"
+            }
+            aria-expanded={companion}
           >
-            <CompanionModel />
+            <CompanionModel active={companion} />
+            {!companion && guide.some((g) => !g.done) && (
+              <span className="pip-badge" aria-hidden="true">
+                {guide.filter((g) => !g.done).length}
+              </span>
+            )}
           </button>
         </div>
       )}
