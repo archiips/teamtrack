@@ -3193,3 +3193,612 @@ a.canvas-note strong {
     max-width: 120px;
   }
 }
+
+/* =====================================================================
+   Navy hero overhaul. References: 21st.dev gradient/grid backgrounds and
+   spotlight cards; Uiverse layered-depth cards. All CSS is original.
+   ===================================================================== */
+:root {
+  --band: 420px;
+  --lift: 0 1px 2px #01073610, 0 8px 24px #0107360f;
+  --lift-hover: 0 2px 4px #01073614, 0 18px 40px #0107361f;
+}
+.workspace {
+  position: relative;
+  isolation: isolate;
+}
+/* The hero band: navy base, two soft glows and a faint grid. */
+.workspace::before,
+.workspace::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: var(--band);
+  z-index: -1;
+  pointer-events: none;
+}
+.workspace::before {
+  background:
+    radial-gradient(ellipse 50% 70% at 85% 10%, #3a5aa055, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 8% 100%, #fcf1d01c, transparent 70%),
+    linear-gradient(160deg, #0d1c42 0%, #010736 100%);
+  border-radius: 0 0 0 36px;
+}
+.workspace::after {
+  background-image:
+    linear-gradient(#ffffff09 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff09 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(180deg, #000 30%, transparent);
+  border-radius: 0 0 0 36px;
+}
+/* Topbar sits on the band. */
+.topbar {
+  background: transparent;
+  border-bottom: 1px solid #ffffff14;
+}
+.breadcrumb {
+  font-size: 12px;
+  color: #9fb0d4;
+}
+.breadcrumb strong {
+  color: var(--cream);
+}
+.topbar .demo-badge {
+  background: #ffffff10;
+  border-color: #ffffff22;
+  color: #dfe6f5;
+}
+.topbar .icon-button {
+  color: #dfe6f5;
+  background: #ffffff10;
+  border-color: #ffffff1f;
+}
+.topbar .icon-button:hover {
+  background: #ffffff1f;
+}
+/* Heading in the band. */
+.page-heading {
+  position: relative;
+  min-height: 132px;
+  margin-bottom: 18px;
+}
+.page-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--cream);
+  background: #fcf1d014;
+  border: 1px solid #fcf1d02b;
+  padding: 5px 11px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+.page-heading h1 {
+  color: #fff;
+  font-size: clamp(30px, 3.2vw, 42px);
+  letter-spacing: -1.4px;
+  line-height: 1.1;
+}
+.page-heading p {
+  font-size: 15px;
+  color: #b8c4e0;
+  margin-top: 10px;
+  max-width: 560px;
+}
+.page-heading .primary {
+  background: var(--cream);
+  color: var(--ink);
+  box-shadow:
+    0 3px 0 #c9b884,
+    0 10px 24px #0107364d;
+  font-size: 13px;
+  min-height: 44px;
+  padding: 11px 20px;
+}
+.page-heading .primary:hover:not(:disabled) {
+  background: #fff6dc;
+  box-shadow:
+    0 4px 0 #c9b884,
+    0 14px 30px #01073666;
+}
+.page-heading .primary:active:not(:disabled) {
+  box-shadow:
+    0 1px 0 #c9b884,
+    0 4px 10px #0107364d;
+}
+/* Project strip floats on the band. */
+.project-strip {
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  box-shadow: 0 10px 30px #01073633;
+  border-radius: 14px;
+  padding: 14px 18px;
+}
+.roster-status {
+  border-radius: 12px;
+}
+/* Cards: rounder, layered depth, lift and a cursor-following glow. */
+.panel,
+.stats > div {
+  position: relative;
+  border-radius: 16px;
+  border-color: #e6e9f2;
+  box-shadow: var(--lift);
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.22s,
+    border-color 0.22s;
+}
+.stats > div:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--lift-hover);
+  border-color: #cfd7ea;
+}
+.panel:hover {
+  box-shadow: var(--lift-hover);
+}
+.panel::after,
+.stats > div::after,
+.board-card::after,
+.profiles button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+  background: radial-gradient(
+    320px circle at var(--mx, 50%) var(--my, 50%),
+    #22396f12,
+    transparent 60%
+  );
+}
+.panel:hover::after,
+.stats > div:hover::after,
+.board-card:hover::after,
+.profiles button:hover::after {
+  opacity: 1;
+}
+.board-card,
+.profiles button {
+  position: relative;
+}
+/* Stat tiles. */
+.stats {
+  gap: 18px;
+}
+.stats > div {
+  background: #fff;
+  padding: 22px 24px;
+  min-height: 150px;
+}
+.stats > div > span {
+  font-size: 13px;
+  font-weight: 650;
+  color: #4f5a75;
+}
+.stats strong {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  color: var(--ink);
+  margin: 14px 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.stats strong small {
+  font-size: 20px;
+}
+.stats > div > small {
+  font-size: 12px;
+  color: #6b7590;
+}
+.stat-note {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #edf5ef;
+  color: #3f7258 !important;
+  vertical-align: middle;
+}
+.alert-stat .stat-note {
+  background: #fbf0df;
+  color: #93652c !important;
+}
+.alert-stat {
+  border-color: #f0dcbc !important;
+}
+.stat-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.stat-icon.blue {
+  background: #e8eefa;
+  color: #3b5ea8;
+}
+.stat-icon.amber {
+  background: #fbf0df;
+  color: #a06a22;
+}
+.stat-icon.cream {
+  background: #fff;
+  color: var(--blue);
+  box-shadow: 0 1px 0 #eadfbf;
+}
+.stats .cream-stat {
+  background: linear-gradient(160deg, #fffaf0, #fcf1d0);
+  border-color: #efe3c0;
+}
+.stats > .hero-stat {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #fff;
+  border-color: #e6e9f2;
+  color: var(--ink);
+}
+.stats > .hero-stat > div {
+  min-width: 0;
+}
+.stats > .hero-stat span,
+.stats > .hero-stat small {
+  color: #4f5a75;
+}
+.stats > .hero-stat strong {
+  color: var(--ink);
+}
+.stats > .hero-stat strong small {
+  color: #a1a6b5;
+}
+.ring {
+  flex: none;
+  width: 92px;
+  height: 92px;
+  transform: rotate(-90deg);
+}
+.ring circle {
+  fill: none;
+  stroke-width: 7;
+}
+.ring-track {
+  stroke: #edf0f6;
+}
+.ring-fill {
+  stroke: var(--green);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: ring-in 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.ring text {
+  transform: rotate(90deg);
+  transform-origin: 32px 32px;
+  font-size: 14px;
+  font-weight: 800;
+  fill: var(--ink);
+}
+@keyframes ring-in {
+  from {
+    stroke-dashoffset: 163.4;
+  }
+}
+/* Bars fill in. */
+.status-bar i,
+.progress i {
+  transform-origin: left;
+  animation: grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.status-bar i:nth-child(2) {
+  animation-delay: 0.08s;
+}
+.status-bar i:nth-child(3) {
+  animation-delay: 0.16s;
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+/* View transitions. */
+.view-enter {
+  animation: view-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+/* Panel content scale-up for readability. */
+.panel-title h2 {
+  font-size: 18px;
+  letter-spacing: -0.4px;
+}
+.panel-title p,
+.panel-foot {
+  font-size: 13px;
+}
+.task-name strong {
+  font-size: 14px;
+}
+.task-name small,
+.task-owner,
+.task-date {
+  font-size: 12px;
+}
+.status {
+  font-size: 12px;
+  font-weight: 650;
+  width: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f3f8;
+  justify-self: start;
+}
+.status.in_progress {
+  background: #e8eefa;
+}
+.status.done {
+  background: #e6f2eb;
+}
+.task-row {
+  transition: background 0.15s;
+}
+.task-row:hover {
+  background: #f7f9fd;
+}
+/* Sidebar: deeper, with a glow and a clearer active state. */
+.sidebar {
+  background:
+    radial-gradient(ellipse 120% 40% at 0% 100%, #22396f88, transparent 70%),
+    linear-gradient(180deg, #0d1c42, #010736);
+}
+nav button {
+  font-size: 13.5px;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+nav button:hover:not(.active) {
+  background: #ffffff0d;
+  color: #fff;
+  transform: translateX(2px);
+}
+nav button.active {
+  box-shadow:
+    0 2px 0 #c9b884,
+    0 8px 20px #00000033;
+  font-weight: 750;
+}
+/* Pip in the overview band. */
+.hero-pip {
+  position: absolute;
+  right: 150px;
+  top: -22px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 5;
+}
+.hero-pip-model {
+  width: 150px;
+  height: 150px;
+  background: none;
+  padding: 0;
+  border-radius: 50%;
+}
+.hero-pip-model:hover {
+  transform: translateY(-3px);
+}
+.pip-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fcf1d0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  padding: 9px 12px 9px 15px;
+  border-radius: 16px 16px 4px 16px;
+  box-shadow:
+    0 2px 0 #c9b884,
+    0 10px 24px #0107364d;
+  white-space: nowrap;
+  animation: bubble-bob 4s ease-in-out infinite;
+}
+@keyframes bubble-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.companion-pop.in-band {
+  position: absolute;
+  top: calc(100% - 6px);
+  bottom: auto;
+  right: 0;
+  z-index: 50;
+  transform-origin: top right;
+}
+/* Welcome page. */
+.welcome-story::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(#ffffff08 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff08 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at 30% 60%, #000, transparent 75%);
+  pointer-events: none;
+}
+.welcome-story::after {
+  content: "";
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  right: -180px;
+  top: -160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #3a5aa066, transparent 65%);
+  animation: drift 16s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes drift {
+  to {
+    transform: translate(-60px, 80px);
+  }
+}
+.welcome-story > * {
+  position: relative;
+  z-index: 1;
+}
+.welcome-story h1 em {
+  font-style: normal;
+  background: linear-gradient(90deg, #fcf1d0, #f3d38a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.welcome-login h2 {
+  font-size: 34px;
+  letter-spacing: -1px;
+}
+.profiles button {
+  border-radius: 14px;
+  box-shadow: 0 2px 0 #e9ecf3;
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+.profiles button:hover {
+  transform: translateY(-3px);
+  border-color: #b9c4dc;
+  box-shadow:
+    0 3px 0 #dfe3ec,
+    0 14px 28px #0d1c4214;
+}
+.profiles button > svg:last-child {
+  transition: transform 0.2s;
+}
+.profiles button:hover > svg:last-child {
+  transform: translateX(4px);
+  color: var(--navy);
+}
+.profiles strong {
+  font-size: 15px;
+}
+.profiles small {
+  font-size: 12px;
+}
+/* Inside Canvas the band is shorter to save vertical space. */
+.embedded {
+  --band: 380px;
+}
+@media (max-width: 1150px) {
+  .hero-pip {
+    right: 130px;
+  }
+  .hero-pip-model {
+    width: 120px;
+    height: 120px;
+  }
+}
+@media (max-width: 900px) {
+  .hero-pip .pip-bubble {
+    display: none;
+  }
+  .hero-pip {
+    top: -10px;
+  }
+}
+@media (max-width: 650px) {
+  :root {
+    --band: 330px;
+  }
+  .hero-pip {
+    display: none;
+  }
+  .stats strong {
+    font-size: 34px;
+  }
+  .stats > .hero-stat {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .ring {
+    width: 64px;
+    height: 64px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stats > div:hover,
+  .profiles button:hover,
+  nav button:hover:not(.active),
+  .hero-pip-model:hover {
+    transform: none;
+  }
+}
+.companion-wrap.on-overview {
+  display: none;
+}
+@media (max-width: 650px) {
+  .companion-wrap.on-overview {
+    display: block;
+  }
+}
+.page-heading .companion-pop > p {
+  color: #5f687e;
+  font-size: 13px;
+  margin: 6px 0 12px;
+  max-width: none;
+}
+/* Welcome: warm right panel. */
+.welcome {
+  background:
+    radial-gradient(ellipse 60% 45% at 100% 0%, #fcf1d0aa, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, #dfe7f7aa, transparent 70%),
+    #fbfbfd;
+}
+.welcome-login .demo-badge {
+  background: #fff;
+  box-shadow: 0 2px 0 #e9ecf3;
+}
+.profiles button .avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 13px;
+  font-weight: 800;
+  background: linear-gradient(150deg, #e8eefa, #d6e0f5);
+  color: var(--blue);
+}
+.profiles button:first-child .avatar {
+  background: linear-gradient(150deg, var(--blue), var(--navy));
+  color: var(--cream);
+}
+@media (max-width: 650px) {
+  :root {
+    --band: 440px;
+  }
+  .page-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    min-height: 0;
+  }
+  .page-heading h1 {
+    font-size: 28px;
+  }
+  .page-heading p {
+    font-size: 14px;
+  }
+}

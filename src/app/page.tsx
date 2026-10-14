@@ -10,6 +10,7 @@ import {
   mixLabel,
 } from "@/components/insights";
 import { memberBreakdown, teamHealth } from "@/lib/insights";
+import { CountUp, Ring, useSpotlight } from "@/components/motion";
 const CompanionModel = dynamic(() => import("@/components/companion-model"), {
   ssr: false,
 });
@@ -116,6 +117,7 @@ export default function Page() {
       setLoading(false);
     }
   }
+  useSpotlight();
   useEffect(() => {
     fetch("/api/workspace")
       .then(async (r) => {
@@ -362,6 +364,56 @@ export default function Page() {
             view: "tasks",
           },
         ];
+  const todoCount = guide.filter((g) => !g.done).length;
+  const pipPanel = (
+    <>
+      <button
+        className="close"
+        aria-label="Hide Pip"
+        title="Hide Pip (you can bring Pip back from the footer)"
+        onClick={() => {
+          setDismissed(true);
+          setCompanion(false);
+          store("set");
+        }}
+      >
+        <X size={14} />
+      </button>
+      <strong>Hey, I’m Pip.</strong>
+      <p>
+        {prof
+          ? "Here’s where a little support could help right now."
+          : "A few small steps to keep your team moving."}
+      </p>
+      <ul className="pip-list">
+        {guide.map((g) => (
+          <li key={g.label} className={g.done ? "done" : ""}>
+            <button
+              onClick={() => {
+                setView(g.view);
+                if (g.filter) setFilter(g.filter);
+                setCompanion(false);
+              }}
+            >
+              <span className="pip-check" aria-hidden="true">
+                {g.done && <Check size={11} />}
+              </span>
+              <span>
+                {g.label}
+                <span className="sr-only">
+                  {g.done ? " (done)" : " (to do)"}
+                </span>
+              </span>
+              <ChevronRight size={14} />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <small className="pip-foot">
+        Pip only reads what your team records. Nothing here is graded.
+      </small>
+    </>
+  );
   function taskRow(t: Task) {
     const owner = s!.users.find((u) => u.id === t.ownerId);
     return (
@@ -425,6 +477,7 @@ export default function Page() {
               className={view === n.id ? "active" : ""}
               onClick={() => {
                 setView(n.id);
+                setCompanion(false);
                 setQuery("");
               }}
             >
@@ -535,6 +588,44 @@ export default function Page() {
                         : "Meaningful changes, recorded with the people behind them."}
               </p>
             </div>
+            {view === "overview" && !dismissed && (
+              <div
+                className="hero-pip"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setCompanion(false);
+                }}
+              >
+                <button
+                  className="pip-bubble"
+                  aria-expanded={companion}
+                  onClick={() => setCompanion(!companion)}
+                >
+                  {todoCount
+                    ? `${todoCount} thing${todoCount === 1 ? "" : "s"} worth a look`
+                    : "You’re all caught up"}
+                  <ChevronRight size={15} />
+                </button>
+                <button
+                  className="hero-pip-model"
+                  aria-label={
+                    companion ? "Close Pip" : "Open Pip, your TeamTrack guide"
+                  }
+                  aria-expanded={companion}
+                  onClick={() => setCompanion(!companion)}
+                >
+                  <CompanionModel hero active={companion} />
+                </button>
+                {companion && (
+                  <div
+                    className="companion-pop in-band"
+                    role="dialog"
+                    aria-label="Pip, your TeamTrack guide"
+                  >
+                    {pipPanel}
+                  </div>
+                )}
+              </div>
+            )}
             {view === "tasks" || view === "overview" ? (
               <button
                 className="primary"
@@ -625,587 +716,613 @@ export default function Page() {
               )}
             </div>
           </div>
-          {view === "overview" && (
-            <>
-              <div className="stats">
-                <div className="hero-stat">
-                  <span>Work completed</span>
-                  <strong>
-                    {done}
-                    <small> / {all.length}</small>
-                  </strong>
-                  <div className="progress">
-                    <i
-                      style={{
-                        width: `${all.length ? (done / all.length) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <small>
-                    {all.length ? Math.round((done / all.length) * 100) : 0}% of
-                    recorded tasks
-                  </small>
-                </div>
-                <div>
-                  <span>
-                    Moving forward <Clock3 size={16} />
-                  </span>
-                  <strong>
-                    {all.filter((t) => t.status === "in_progress").length}
-                  </strong>
-                  <small>Tasks currently in progress</small>
-                </div>
-                <div>
-                  <span>
-                    Needs a hand <Flag size={16} />
-                  </span>
-                  <strong>
-                    {blocked}
-                    <span className="stat-note">
-                      {blocked ? "Let’s unblock it" : "All clear"}
-                    </span>
-                  </strong>
-                  <small>
-                    Open blockers across {prof ? "your course" : "your team"}
-                  </small>
-                </div>
-                <div className="cream-stat">
-                  <span>
-                    {prof ? "Teams connected" : "Team agreement"}
-                    <Users size={16} />
-                  </span>
-                  <strong>
-                    {prof ? s.teams.length : team?.accepted.length}
-                    <small>{prof ? "" : ` / ${team?.memberIds.length}`}</small>
-                  </strong>
-                  <small>
-                    {prof
-                      ? "Working toward a shared goal"
-                      : "Members have accepted this version"}
-                  </small>
-                </div>
-              </div>
-              <div className="overview-grid">
-                <section className="panel main-panel">
-                  <div className="panel-title">
+          <div className="view-enter" key={view}>
+            {view === "overview" && (
+              <>
+                <div className="stats">
+                  <div className="hero-stat">
+                    <Ring pct={all.length ? (done / all.length) * 100 : 0} />
                     <div>
-                      <h2>{prof ? "Teams at a glance" : "Your next steps"}</h2>
-                      <p>
-                        {prof
-                          ? "A little context makes all the difference."
-                          : "The work that brings your project closer."}
-                      </p>
+                      <span>Work completed</span>
+                      <strong>
+                        <CountUp value={done} />
+                        <small> / {all.length}</small>
+                      </strong>
+                      <small>
+                        {all.length ? Math.round((done / all.length) * 100) : 0}
+                        % of recorded tasks
+                      </small>
                     </div>
-                    <button
-                      className="text-button"
-                      onClick={() => setView(prof ? "team" : "tasks")}
-                    >
-                      View all
-                      <ArrowUpRight size={15} />
-                    </button>
                   </div>
-                  {prof ? (
-                    <div className="team-overview">
-                      {s.teams.map((t) => {
-                        const h = teamHealth(s, t, today()),
-                          reasons = [
-                            h.blocked && `${h.blocked} blocked`,
-                            h.overdue && `${h.overdue} overdue`,
-                            h.pendingAgreement &&
-                              `${h.pendingAgreement} agreement pending`,
-                          ].filter(Boolean) as string[];
-                        return (
-                          <button
-                            key={t.id}
-                            className="team-summary"
-                            onClick={() => {
-                              setTeamId(t.id);
-                              setView("tasks");
-                            }}
-                          >
-                            <span className="avatar-stack">
-                              {s.users
-                                .filter((u) => t.memberIds.includes(u.id))
-                                .slice(0, 4)
-                                .map((u) => (
-                                  <Avatar key={u.id} user={u} small />
-                                ))}
-                            </span>
-                            <div>
-                              <strong>{t.name}</strong>
-                              <StatusBar mix={h} label={mixLabel(h)} />
-                              <span>
-                                {h.done} of {h.total} tasks done{" "}
-                                <span className="dot">·</span>{" "}
-                                {t.memberIds.length} members
-                              </span>
-                            </div>
-                            <span className="reason-chips">
-                              {reasons.length ? (
-                                reasons.map((r) => (
-                                  <span key={r} className="attention-tag">
-                                    {r}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="clear-tag">On track</span>
-                              )}
-                            </span>
-                            <ChevronRight size={17} />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div>
-                      {tasks
-                        .filter((t) => t.status !== "done")
-                        .slice(0, 3)
-                        .map(taskRow)}
-                      {!tasks.some((t) => t.status !== "done") && (
-                        <div className="empty">
-                          <CheckCircle2 />
-                          You’re all caught up. Nice work.
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="panel-foot">
-                    <span className="tiny-dot" />
-                    Progress shows recorded tasks, not effort or quality.
-                  </div>
-                </section>
-                <section className="focus-card">
-                  <span className="focus-label">
-                    <Compass size={16} />
-                    Team focus
-                  </span>
-                  <h2>
-                    Find the friction.
-                    <br />
-                    Make the path clearer.
-                  </h2>
-                  <p>{s.description}</p>
-                  <div className="checkpoint-track">
-                    <span className="finished">
-                      <Check size={12} />
-                    </span>
-                    <i />
-                    <span className="current" />
-                    <i />
-                    <span />
-                    <i />
-                    <span />
-                  </div>
-                  <div className="checkpoint-labels">
-                    <span>Discover</span>
-                    <span>Define</span>
-                    <span>Prototype</span>
-                    <span>Share</span>
-                  </div>
-                  <button onClick={() => setView("tasks")}>
-                    Keep the project moving
-                    <ArrowRight size={17} />
-                  </button>
-                </section>
-              </div>
-              <div className="overview-grid lower">
-                <section className="panel">
-                  <div className="panel-title">
-                    <div>
-                      <h2>Recent contributions</h2>
-                      <p>Good work deserves context.</p>
-                    </div>
-                    <button
-                      className="text-button"
-                      onClick={() => setView("activity")}
-                    >
-                      Activity
-                      <ArrowUpRight size={15} />
-                    </button>
-                  </div>
-                  {s.entries
-                    .filter((e) => e.kind === "contribution")
-                    .slice(0, 3)
-                    .map((e) => {
-                      const u = s.users.find((x) => x.id === e.actorId),
-                        t = s.tasks.find((x) => x.id === e.taskId);
-                      return (
-                        <button
-                          className="contribution-preview"
-                          key={e.id}
-                          onClick={() => setSelected(e.taskId)}
-                        >
-                          <Avatar user={u} />
-                          <div>
-                            <strong>
-                              {u?.name}
-                              <span> shared an update</span>
-                            </strong>
-                            <p>{e.body}</p>
-                            <small>{t?.title}</small>
-                          </div>
-                          <ArrowUpRight size={15} />
-                        </button>
-                      );
-                    })}
-                </section>
-                <section className="panel">
-                  <div className="panel-title">
-                    <div>
-                      <h2>Coming up</h2>
-                      <p>A little planning goes a long way.</p>
-                    </div>
-                    <CalendarDays size={19} />
-                  </div>
-                  {all
-                    .filter((t) => t.status !== "done")
-                    .sort((a, b) => a.due.localeCompare(b.due))
-                    .slice(0, 3)
-                    .map((t) => (
-                      <button
-                        className="deadline"
-                        key={t.id}
-                        onClick={() => {
-                          setTeamId(t.teamId);
-                          setSelected(t.id);
-                        }}
-                      >
-                        <span className="date-tile">
-                          <small>{date(t.due).split(" ")[0]}</small>
-                          {date(t.due).split(" ")[1]}
-                        </span>
-                        <span>
-                          <strong>{t.title}</strong>
-                          <small>
-                            {s.users.find((u) => u.id === t.ownerId)?.name}
-                          </small>
-                        </span>
-                        <ChevronRight size={15} />
-                      </button>
-                    ))}
-                </section>
-              </div>
-            </>
-          )}
-          {view === "tasks" && (
-            <section className="panel tasks-panel">
-              <div className="task-toolbar">
-                <div className="tabs">
-                  {[
-                    ["all", "All tasks"],
-                    ["mine", "Assigned to me"],
-                    ["done", "Completed"],
-                  ].map(([id, label]) => (
-                    <button
-                      key={id}
-                      className={filter === id ? "selected" : ""}
-                      onClick={() => setFilter(id)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <div className="task-tools">
-                  <label className="search">
-                    <Search size={16} />
-                    <input
-                      aria-label="Search tasks"
-                      placeholder="Find a task…"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="secondary"
-                    onClick={() => setBoard(!board)}
-                  >
-                    {board ? "List view" : "Board view"}
-                  </button>
-                </div>
-              </div>
-              {board ? (
-                <div className="board">
-                  {(["todo", "in_progress", "done"] as const).map((status) => (
-                    <div key={status} className="board-column">
-                      <h3>
-                        <span className={`status ${status}`}>
-                          <span />
-                          {labels[status]}
-                        </span>
-                        <small>
-                          {filtered.filter((t) => t.status === status).length}
-                        </small>
-                      </h3>
-                      {filtered
-                        .filter((t) => t.status === status)
-                        .map((t) => (
-                          <button
-                            className={`board-card ${t.status}`}
-                            key={t.id}
-                            onClick={() => setSelected(t.id)}
-                          >
-                            <small>{t.checkpoint}</small>
-                            <strong>{t.title}</strong>
-                            {t.blocker && t.status !== "done" && (
-                              <span className="blocker">
-                                <Flag size={12} />
-                                Blocked
-                              </span>
-                            )}
-                            <div>
-                              <Avatar
-                                user={s.users.find((u) => u.id === t.ownerId)}
-                                small
-                              />
-                              <span
-                                className={`due-chip ${t.status !== "done" && t.due < today() ? "overdue" : ""}`}
-                              >
-                                {date(t.due)}
-                              </span>
-                            </div>
-                          </button>
-                        ))}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <>
-                  <div className="table-head">
-                    <span>Task</span>
-                    <span>Status</span>
-                    <span>Owner</span>
-                    <span>Due date</span>
-                  </div>
-                  {filtered.map(taskRow)}
-                </>
-              )}
-              {!filtered.length && (
-                <div className="empty">
-                  <ListTodo />
-                  No tasks here yet.
-                  <button
-                    className="text-button"
-                    onClick={() => setNewTask(true)}
-                  >
-                    Create a task
-                  </button>
-                </div>
-              )}
-            </section>
-          )}
-          {view === "team" && (
-            <div className="team-grid">
-              {(prof ? s.teams : [team]).filter(Boolean).map((t) => (
-                <section className="panel" key={t.id}>
-                  <div className="panel-title">
-                    <div>
-                      <h2>{t.name}</h2>
-                      <p>{t.memberIds.length} people, one shared project.</p>
-                    </div>
-                    <span className="team-emblem">
-                      <Compass size={24} />
-                    </span>
-                  </div>
-                  <MemberBreakdown
-                    rows={memberBreakdown(s, t)}
-                    userId={userId}
-                    avatar={(r) => <Avatar user={r.user} />}
-                  />
-                  <div className="panel-foot">
-                    Counts describe recorded activity. Review the work for
-                    context.
-                  </div>
-                  <button
-                    className="panel-action"
-                    onClick={() => {
-                      setTeamId(t.id);
-                      setView("tasks");
-                    }}
-                  >
-                    Open team workspace
-                    <ArrowRight size={16} />
-                  </button>
-                </section>
-              ))}
-            </div>
-          )}
-          {view === "agreement" && team && (
-            <div className="agreement-grid">
-              <section className="panel agreement-body">
-                <div className="panel-title">
                   <div>
-                    <span className="version">
-                      Version {team.agreementVersion}
+                    <span>
+                      Moving forward
+                      <i className="stat-icon blue">
+                        <Clock3 size={17} />
+                      </i>
                     </span>
-                    <h2>How we work together</h2>
-                    <p>Our shared expectations for {team.name}.</p>
+                    <strong>
+                      <CountUp
+                        value={
+                          all.filter((t) => t.status === "in_progress").length
+                        }
+                      />
+                    </strong>
+                    <small>Tasks currently in progress</small>
                   </div>
-                  <FileCheck2 size={28} />
+                  <div className={blocked ? "alert-stat" : ""}>
+                    <span>
+                      Needs a hand
+                      <i className="stat-icon amber">
+                        <Flag size={17} />
+                      </i>
+                    </span>
+                    <strong>
+                      <CountUp value={blocked} />
+                      <span className="stat-note">
+                        {blocked ? "Let’s unblock it" : "All clear"}
+                      </span>
+                    </strong>
+                    <small>
+                      Open blockers across {prof ? "your course" : "your team"}
+                    </small>
+                  </div>
+                  <div className="cream-stat">
+                    <span>
+                      {prof ? "Teams connected" : "Team agreement"}
+                      <i className="stat-icon cream">
+                        <Users size={17} />
+                      </i>
+                    </span>
+                    <strong>
+                      <CountUp
+                        value={
+                          (prof ? s.teams.length : team?.accepted.length) || 0
+                        }
+                      />
+                      <small>
+                        {prof ? "" : ` / ${team?.memberIds.length}`}
+                      </small>
+                    </strong>
+                    <small>
+                      {prof
+                        ? "Working toward a shared goal"
+                        : "Members have accepted this version"}
+                    </small>
+                  </div>
                 </div>
-                <div className="agreement-text">
-                  {team.agreement.split("\n").map((line, i) => (
-                    <p key={i}>
-                      <CheckCircle2 size={19} />
-                      {line}
-                    </p>
-                  ))}
-                </div>
-                {team.memberIds.includes(userId) &&
-                  (team.accepted.includes(userId) ? (
-                    <div className="accepted">
-                      <CheckCircle2 size={20} />
-                      You’ve accepted this agreement.
-                    </div>
-                  ) : (
-                    <button
-                      className="primary"
-                      disabled={busy}
-                      onClick={() =>
-                        command(
-                          {
-                            type: "agreement.accept",
-                            teamId: team.id,
-                            version: team.agreementVersion,
-                          },
-                          "Agreement accepted",
-                        )
-                      }
-                    >
-                      <Check size={17} />
-                      Accept this agreement
-                    </button>
-                  ))}
-                {team.agreementHistory?.length ? (
-                  <details className="agreement-edit">
-                    <summary>Previous versions</summary>
-                    {team.agreementHistory.map((h) => (
-                      <div key={h.version}>
-                        <h3>Version {h.version}</h3>
-                        <p style={{ whiteSpace: "pre-wrap" }}>{h.body}</p>
+                <div className="overview-grid">
+                  <section className="panel main-panel">
+                    <div className="panel-title">
+                      <div>
+                        <h2>
+                          {prof ? "Teams at a glance" : "Your next steps"}
+                        </h2>
                         <p>
-                          Accepted by:{" "}
-                          {h.accepted
-                            .map(
-                              (id) =>
-                                s.users.find((u) => u.id === id)?.name ||
-                                "Former member",
-                            )
-                            .join(", ") || "No acceptances recorded"}
+                          {prof
+                            ? "A little context makes all the difference."
+                            : "The work that brings your project closer."}
                         </p>
                       </div>
-                    ))}
-                  </details>
-                ) : null}
-                <details className="agreement-edit">
-                  <summary>Update our agreement</summary>
-                  <p>
-                    Publishing a new version asks every member to accept again.
-                  </p>
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const f = new FormData(e.currentTarget);
-                      if (
-                        confirm(
-                          "Publish a new agreement version? Everyone will need to accept again.",
-                        )
-                      )
-                        await command(
-                          {
-                            type: "agreement.publish",
-                            version: team.agreementVersion,
-                            teamId: team.id,
-                            body: f.get("body"),
-                          },
-                          "New agreement published",
-                        );
-                    }}
-                  >
-                    <textarea
-                      name="body"
-                      aria-label="Agreement text"
-                      defaultValue={team.agreement}
-                      required
-                      maxLength={12000}
-                    />
-                    <button className="secondary" disabled={busy}>
-                      Publish new version
+                      <button
+                        className="text-button"
+                        onClick={() => setView(prof ? "team" : "tasks")}
+                      >
+                        View all
+                        <ArrowUpRight size={15} />
+                      </button>
+                    </div>
+                    {prof ? (
+                      <div className="team-overview">
+                        {s.teams.map((t) => {
+                          const h = teamHealth(s, t, today()),
+                            reasons = [
+                              h.blocked && `${h.blocked} blocked`,
+                              h.overdue && `${h.overdue} overdue`,
+                              h.pendingAgreement &&
+                                `${h.pendingAgreement} agreement pending`,
+                            ].filter(Boolean) as string[];
+                          return (
+                            <button
+                              key={t.id}
+                              className="team-summary"
+                              onClick={() => {
+                                setTeamId(t.id);
+                                setView("tasks");
+                              }}
+                            >
+                              <span className="avatar-stack">
+                                {s.users
+                                  .filter((u) => t.memberIds.includes(u.id))
+                                  .slice(0, 4)
+                                  .map((u) => (
+                                    <Avatar key={u.id} user={u} small />
+                                  ))}
+                              </span>
+                              <div>
+                                <strong>{t.name}</strong>
+                                <StatusBar mix={h} label={mixLabel(h)} />
+                                <span>
+                                  {h.done} of {h.total} tasks done{" "}
+                                  <span className="dot">·</span>{" "}
+                                  {t.memberIds.length} members
+                                </span>
+                              </div>
+                              <span className="reason-chips">
+                                {reasons.length ? (
+                                  reasons.map((r) => (
+                                    <span key={r} className="attention-tag">
+                                      {r}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="clear-tag">On track</span>
+                                )}
+                              </span>
+                              <ChevronRight size={17} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div>
+                        {tasks
+                          .filter((t) => t.status !== "done")
+                          .slice(0, 3)
+                          .map(taskRow)}
+                        {!tasks.some((t) => t.status !== "done") && (
+                          <div className="empty">
+                            <CheckCircle2 />
+                            You’re all caught up. Nice work.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="panel-foot">
+                      <span className="tiny-dot" />
+                      Progress shows recorded tasks, not effort or quality.
+                    </div>
+                  </section>
+                  <section className="focus-card">
+                    <span className="focus-label">
+                      <Compass size={16} />
+                      Team focus
+                    </span>
+                    <h2>
+                      Find the friction.
+                      <br />
+                      Make the path clearer.
+                    </h2>
+                    <p>{s.description}</p>
+                    <div className="checkpoint-track">
+                      <span className="finished">
+                        <Check size={12} />
+                      </span>
+                      <i />
+                      <span className="current" />
+                      <i />
+                      <span />
+                      <i />
+                      <span />
+                    </div>
+                    <div className="checkpoint-labels">
+                      <span>Discover</span>
+                      <span>Define</span>
+                      <span>Prototype</span>
+                      <span>Share</span>
+                    </div>
+                    <button onClick={() => setView("tasks")}>
+                      Keep the project moving
+                      <ArrowRight size={17} />
                     </button>
-                  </form>
-                </details>
-              </section>
-              <section className="panel">
-                <div className="panel-title">
-                  <div>
-                    <h2>On the same page</h2>
-                    <p>
-                      {team.accepted.length} of {members.length} members
-                      accepted
-                    </p>
+                  </section>
+                </div>
+                <div className="overview-grid lower">
+                  <section className="panel">
+                    <div className="panel-title">
+                      <div>
+                        <h2>Recent contributions</h2>
+                        <p>Good work deserves context.</p>
+                      </div>
+                      <button
+                        className="text-button"
+                        onClick={() => setView("activity")}
+                      >
+                        Activity
+                        <ArrowUpRight size={15} />
+                      </button>
+                    </div>
+                    {s.entries
+                      .filter((e) => e.kind === "contribution")
+                      .slice(0, 3)
+                      .map((e) => {
+                        const u = s.users.find((x) => x.id === e.actorId),
+                          t = s.tasks.find((x) => x.id === e.taskId);
+                        return (
+                          <button
+                            className="contribution-preview"
+                            key={e.id}
+                            onClick={() => setSelected(e.taskId)}
+                          >
+                            <Avatar user={u} />
+                            <div>
+                              <strong>
+                                {u?.name}
+                                <span> shared an update</span>
+                              </strong>
+                              <p>{e.body}</p>
+                              <small>{t?.title}</small>
+                            </div>
+                            <ArrowUpRight size={15} />
+                          </button>
+                        );
+                      })}
+                  </section>
+                  <section className="panel">
+                    <div className="panel-title">
+                      <div>
+                        <h2>Coming up</h2>
+                        <p>A little planning goes a long way.</p>
+                      </div>
+                      <CalendarDays size={19} />
+                    </div>
+                    {all
+                      .filter((t) => t.status !== "done")
+                      .sort((a, b) => a.due.localeCompare(b.due))
+                      .slice(0, 3)
+                      .map((t) => (
+                        <button
+                          className="deadline"
+                          key={t.id}
+                          onClick={() => {
+                            setTeamId(t.teamId);
+                            setSelected(t.id);
+                          }}
+                        >
+                          <span className="date-tile">
+                            <small>{date(t.due).split(" ")[0]}</small>
+                            {date(t.due).split(" ")[1]}
+                          </span>
+                          <span>
+                            <strong>{t.title}</strong>
+                            <small>
+                              {s.users.find((u) => u.id === t.ownerId)?.name}
+                            </small>
+                          </span>
+                          <ChevronRight size={15} />
+                        </button>
+                      ))}
+                  </section>
+                </div>
+              </>
+            )}
+            {view === "tasks" && (
+              <section className="panel tasks-panel">
+                <div className="task-toolbar">
+                  <div className="tabs">
+                    {[
+                      ["all", "All tasks"],
+                      ["mine", "Assigned to me"],
+                      ["done", "Completed"],
+                    ].map(([id, label]) => (
+                      <button
+                        key={id}
+                        className={filter === id ? "selected" : ""}
+                        onClick={() => setFilter(id)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="task-tools">
+                    <label className="search">
+                      <Search size={16} />
+                      <input
+                        aria-label="Search tasks"
+                        placeholder="Find a task…"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                      />
+                    </label>
+                    <button
+                      className="secondary"
+                      onClick={() => setBoard(!board)}
+                    >
+                      {board ? "List view" : "Board view"}
+                    </button>
                   </div>
                 </div>
-                {members.map((u) => (
-                  <div className="member-row" key={u.id}>
-                    <Avatar user={u} />
-                    <div>
-                      <strong>{u.name}</strong>
-                      <span>
-                        {team.accepted.includes(u.id)
-                          ? "Accepted current version"
-                          : "Awaiting acceptance"}
-                      </span>
-                    </div>
-                    {team.accepted.includes(u.id) ? (
-                      <CheckCircle2 className="green-icon" size={19} />
-                    ) : (
-                      <Clock3 size={18} />
+                {board ? (
+                  <div className="board">
+                    {(["todo", "in_progress", "done"] as const).map(
+                      (status) => (
+                        <div key={status} className="board-column">
+                          <h3>
+                            <span className={`status ${status}`}>
+                              <span />
+                              {labels[status]}
+                            </span>
+                            <small>
+                              {
+                                filtered.filter((t) => t.status === status)
+                                  .length
+                              }
+                            </small>
+                          </h3>
+                          {filtered
+                            .filter((t) => t.status === status)
+                            .map((t) => (
+                              <button
+                                className={`board-card ${t.status}`}
+                                key={t.id}
+                                onClick={() => setSelected(t.id)}
+                              >
+                                <small>{t.checkpoint}</small>
+                                <strong>{t.title}</strong>
+                                {t.blocker && t.status !== "done" && (
+                                  <span className="blocker">
+                                    <Flag size={12} />
+                                    Blocked
+                                  </span>
+                                )}
+                                <div>
+                                  <Avatar
+                                    user={s.users.find(
+                                      (u) => u.id === t.ownerId,
+                                    )}
+                                    small
+                                  />
+                                  <span
+                                    className={`due-chip ${t.status !== "done" && t.due < today() ? "overdue" : ""}`}
+                                  >
+                                    {date(t.due)}
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                        </div>
+                      ),
                     )}
                   </div>
-                ))}
-              </section>
-            </div>
-          )}
-          {view === "activity" && (
-            <section className="panel activity-panel">
-              <div className="panel-title">
-                <div>
-                  <h2>Every step has a story</h2>
-                  <p>Changes and contributions in {team?.name}.</p>
-                </div>
-                <Activity size={21} />
-              </div>
-              {s.events
-                .filter((e) => e.teamId === team?.id)
-                .map((e) => (
-                  <div className="event-row" key={e.id}>
-                    <Avatar
-                      user={s.users.find((u) => u.id === e.actorId)}
-                      small
-                    />
-                    <div>
-                      <strong>
-                        {s.users.find((u) => u.id === e.actorId)?.name}
-                      </strong>
-                      <p>{e.body}</p>
+                ) : (
+                  <>
+                    <div className="table-head">
+                      <span>Task</span>
+                      <span>Status</span>
+                      <span>Owner</span>
+                      <span>Due date</span>
                     </div>
-                    <time>
-                      {new Date(e.at).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </time>
+                    {filtered.map(taskRow)}
+                  </>
+                )}
+                {!filtered.length && (
+                  <div className="empty">
+                    <ListTodo />
+                    No tasks here yet.
+                    <button
+                      className="text-button"
+                      onClick={() => setNewTask(true)}
+                    >
+                      Create a task
+                    </button>
                   </div>
+                )}
+              </section>
+            )}
+            {view === "team" && (
+              <div className="team-grid">
+                {(prof ? s.teams : [team]).filter(Boolean).map((t) => (
+                  <section className="panel" key={t.id}>
+                    <div className="panel-title">
+                      <div>
+                        <h2>{t.name}</h2>
+                        <p>{t.memberIds.length} people, one shared project.</p>
+                      </div>
+                      <span className="team-emblem">
+                        <Compass size={24} />
+                      </span>
+                    </div>
+                    <MemberBreakdown
+                      rows={memberBreakdown(s, t)}
+                      userId={userId}
+                      avatar={(r) => <Avatar user={r.user} />}
+                    />
+                    <div className="panel-foot">
+                      Counts describe recorded activity. Review the work for
+                      context.
+                    </div>
+                    <button
+                      className="panel-action"
+                      onClick={() => {
+                        setTeamId(t.id);
+                        setView("tasks");
+                      }}
+                    >
+                      Open team workspace
+                      <ArrowRight size={16} />
+                    </button>
+                  </section>
                 ))}
-              {!s.events.length && (
-                <div className="empty">
-                  Your team’s activity will appear here.
+              </div>
+            )}
+            {view === "agreement" && team && (
+              <div className="agreement-grid">
+                <section className="panel agreement-body">
+                  <div className="panel-title">
+                    <div>
+                      <span className="version">
+                        Version {team.agreementVersion}
+                      </span>
+                      <h2>How we work together</h2>
+                      <p>Our shared expectations for {team.name}.</p>
+                    </div>
+                    <FileCheck2 size={28} />
+                  </div>
+                  <div className="agreement-text">
+                    {team.agreement.split("\n").map((line, i) => (
+                      <p key={i}>
+                        <CheckCircle2 size={19} />
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                  {team.memberIds.includes(userId) &&
+                    (team.accepted.includes(userId) ? (
+                      <div className="accepted">
+                        <CheckCircle2 size={20} />
+                        You’ve accepted this agreement.
+                      </div>
+                    ) : (
+                      <button
+                        className="primary"
+                        disabled={busy}
+                        onClick={() =>
+                          command(
+                            {
+                              type: "agreement.accept",
+                              teamId: team.id,
+                              version: team.agreementVersion,
+                            },
+                            "Agreement accepted",
+                          )
+                        }
+                      >
+                        <Check size={17} />
+                        Accept this agreement
+                      </button>
+                    ))}
+                  {team.agreementHistory?.length ? (
+                    <details className="agreement-edit">
+                      <summary>Previous versions</summary>
+                      {team.agreementHistory.map((h) => (
+                        <div key={h.version}>
+                          <h3>Version {h.version}</h3>
+                          <p style={{ whiteSpace: "pre-wrap" }}>{h.body}</p>
+                          <p>
+                            Accepted by:{" "}
+                            {h.accepted
+                              .map(
+                                (id) =>
+                                  s.users.find((u) => u.id === id)?.name ||
+                                  "Former member",
+                              )
+                              .join(", ") || "No acceptances recorded"}
+                          </p>
+                        </div>
+                      ))}
+                    </details>
+                  ) : null}
+                  <details className="agreement-edit">
+                    <summary>Update our agreement</summary>
+                    <p>
+                      Publishing a new version asks every member to accept
+                      again.
+                    </p>
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        const f = new FormData(e.currentTarget);
+                        if (
+                          confirm(
+                            "Publish a new agreement version? Everyone will need to accept again.",
+                          )
+                        )
+                          await command(
+                            {
+                              type: "agreement.publish",
+                              version: team.agreementVersion,
+                              teamId: team.id,
+                              body: f.get("body"),
+                            },
+                            "New agreement published",
+                          );
+                      }}
+                    >
+                      <textarea
+                        name="body"
+                        aria-label="Agreement text"
+                        defaultValue={team.agreement}
+                        required
+                        maxLength={12000}
+                      />
+                      <button className="secondary" disabled={busy}>
+                        Publish new version
+                      </button>
+                    </form>
+                  </details>
+                </section>
+                <section className="panel">
+                  <div className="panel-title">
+                    <div>
+                      <h2>On the same page</h2>
+                      <p>
+                        {team.accepted.length} of {members.length} members
+                        accepted
+                      </p>
+                    </div>
+                  </div>
+                  {members.map((u) => (
+                    <div className="member-row" key={u.id}>
+                      <Avatar user={u} />
+                      <div>
+                        <strong>{u.name}</strong>
+                        <span>
+                          {team.accepted.includes(u.id)
+                            ? "Accepted current version"
+                            : "Awaiting acceptance"}
+                        </span>
+                      </div>
+                      {team.accepted.includes(u.id) ? (
+                        <CheckCircle2 className="green-icon" size={19} />
+                      ) : (
+                        <Clock3 size={18} />
+                      )}
+                    </div>
+                  ))}
+                </section>
+              </div>
+            )}
+            {view === "activity" && (
+              <section className="panel activity-panel">
+                <div className="panel-title">
+                  <div>
+                    <h2>Every step has a story</h2>
+                    <p>Changes and contributions in {team?.name}.</p>
+                  </div>
+                  <Activity size={21} />
                 </div>
-              )}
-            </section>
-          )}
+                {s.events
+                  .filter((e) => e.teamId === team?.id)
+                  .map((e) => (
+                    <div className="event-row" key={e.id}>
+                      <Avatar
+                        user={s.users.find((u) => u.id === e.actorId)}
+                        small
+                      />
+                      <div>
+                        <strong>
+                          {s.users.find((u) => u.id === e.actorId)?.name}
+                        </strong>
+                        <p>{e.body}</p>
+                      </div>
+                      <time>
+                        {new Date(e.at).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                    </div>
+                  ))}
+                {!s.events.length && (
+                  <div className="empty">
+                    Your team’s activity will appear here.
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
           <footer className="workspace-footer">
             <span>
               <Layers size={14} />
@@ -1237,7 +1354,7 @@ export default function Page() {
       )}
       {!dismissed && (
         <div
-          className="companion-wrap"
+          className={`companion-wrap ${view === "overview" ? "on-overview" : ""}`}
           onKeyDown={(e) => {
             if (e.key === "Escape") setCompanion(false);
           }}
@@ -1248,51 +1365,7 @@ export default function Page() {
               role="dialog"
               aria-label="Pip, your TeamTrack guide"
             >
-              <button
-                className="close"
-                aria-label="Hide Pip"
-                title="Hide Pip (you can bring Pip back from the footer)"
-                onClick={() => {
-                  setDismissed(true);
-                  setCompanion(false);
-                  store("set");
-                }}
-              >
-                <X size={14} />
-              </button>
-              <strong>Hey, I’m Pip.</strong>
-              <p>
-                {prof
-                  ? "Here’s where a little support could help right now."
-                  : "A few small steps to keep your team moving."}
-              </p>
-              <ul className="pip-list">
-                {guide.map((g) => (
-                  <li key={g.label} className={g.done ? "done" : ""}>
-                    <button
-                      onClick={() => {
-                        setView(g.view);
-                        if (g.filter) setFilter(g.filter);
-                        setCompanion(false);
-                      }}
-                    >
-                      <span className="pip-check" aria-hidden="true">
-                        {g.done && <Check size={11} />}
-                      </span>
-                      <span>
-                        {g.label}
-                        <span className="sr-only">
-                          {g.done ? " (done)" : " (to do)"}
-                        </span>
-                      </span>
-                      <ChevronRight size={14} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <small className="pip-foot">
-                Pip only reads what your team records. Nothing here is graded.
-              </small>
+              {pipPanel}
             </div>
           )}
           <button
