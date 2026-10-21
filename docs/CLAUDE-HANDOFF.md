@@ -17,13 +17,13 @@ Stack: Next.js 16.4 / React 19.3 / TypeScript, postgres.js, jose (LTI 1.3), thre
 
 ## Current state (all verified at the time of writing)
 - Live site healthy; synthetic demo reset to seed. Unit 23/23, integration 5/5 (local + production), typecheck, lint, production build pass.
-- **Canvas sandbox is currently offline**: Docker daemon and ngrok were stopped after the demo. Restart steps are in `deploy/README.md`. Until restarted, Canvas launch links fail; the public app and demo profiles still work.
-- Canvas LTI verified end-to-end when running (2026-10-13): course_navigation launch, embedded iframe (GET + CSRF POST), instructor role, NRPS roster sync (1 teacher + 8 students). Canvas platform keys upgraded to 2048-bit. Not verified: student launch via masquerade, Safari embedded. The Canvas course has **no teams yet** (create one from Teams & people).
+- Canvas sandbox restarted 2026-10-21 (same ngrok domain). It stops when Docker/ngrok stop; restart per `deploy/README.md`. Launches take ~20s while Canvas's dev bundles load.
+- Canvas LTI verified end-to-end when running (2026-10-13): course_navigation launch, embedded iframe (GET + CSRF POST), instructor role, NRPS roster sync (1 teacher + 8 students). Canvas platform keys upgraded to 2048-bit. Student launch via masquerade verified 2026-10-21 (Alex Chen sees the student view). Team Alpha (Alex, Jordan, Taylor, Priya) created in the Canvas course. Not verified: Safari embedded.
 - Deploy is manual: `npx vercel --prod --yes` (GitHub auto-deploy is not connected). `.vercelignore` excludes `video`, docs, sandbox, env.
 
 ## What exists (high level)
 - Professor/student workspace: tasks (list + board), owners, due dates, blockers, contributions with HTTPS evidence, versioned team agreement with history, checkpoints, activity log, roster sync status, team creation. No grading.
-- Visual identity: navy/cream palette (#010736 #0D1C42 #22396F #FCF1D0), navy hero band with doodles and paper grid, Fredoka + Instrument Serif accents + Manrope, sticker cards, motion gated on visibility and reduced motion. Logo mark in `src/components/logo.tsx` + `src/app/icon.svg` (user-supplied mark, kept in its own blue-violet colours).
+- Visual identity (2026-10-21): violet palette #5e17eb #8c52ff #cb6ce6 #edbcfa #fbf6f1 (user-chosen). Large surfaces (hero band, sidebar, focus card) use a muted deep violet (#35206f to #1f1247) because full #5e17eb was too vibrant; bright shades are for small accents. Liquid-glass cards/strips/panels/primary button (backdrop blur, frosted gradient, light edge) are the default; sticker badges, doodles, paper grid, Fredoka + Instrument Serif + Manrope stay. Light/dark mode: `<html data-theme>` set before paint by an inline script in `layout.tsx` (saved `tt-theme` or system), toggled by `src/components/theme-toggle.tsx` in the topbar and welcome screen. Colours in `globals.css` are usage-specific `--cN` tokens with light and dark values; the generator lived in the session scratchpad, so edit tokens directly. Note: the compiler drops unprefixed `backdrop-filter` if you also write `-webkit-backdrop-filter`; write only the standard one. Logo mark in `src/components/logo.tsx` + `src/app/icon.svg` (user-supplied mark, kept in its own blue-violet colours).
 - Pip (`src/components/companion-model.tsx`): procedural three.js mascot. Lives in the overview hero band, docked bottom-right elsewhere. Floats, blinks, follows cursor, hops after saves, nods when its checklist has items; ~30fps, pauses when hidden/off-screen. Checklist built from real state. X closes the panel; "Hide Pip" link persists under localStorage `tt-pip-hidden-v2`; footer "Bring back Pip" restores.
 - Insights: `src/lib/insights.ts` (tested) feeds status bars, member breakdown, team health chips. Accessible team menu replaces the old native select.
 
@@ -35,7 +35,8 @@ Stack: Next.js 16.4 / React 19.3 / TypeScript, postgres.js, jose (LTI 1.3), thre
 - Video captures write demo data: always `npm run demo:reset` before and after `video/capture.mjs`.
 
 ## Open / optional next steps
-- Restart Docker + ngrok before any Canvas demo; create a team in the Canvas course.
-- Possibly recolour the logo to navy/cream if the user wants (they kept original colours so far).
+- Restart Docker + ngrok before any Canvas demo.
+- Safari embedded check still open.
+- Phone-width sidebar labels clip (pre-existing).
 - Normalized schema (Prisma) is deferred; current store is a transactional JSON aggregate per namespace.
-- `src/app/api/lti/{launch,login}/route.ts` are not Prettier-formatted (pre-existing; harmless).
+- graphify knowledge graph in `graphify-out/` (git-ignored, post-commit hook rebuilds it).

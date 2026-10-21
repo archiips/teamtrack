@@ -35,7 +35,7 @@
   --c18: #9c92c6;
   --c19: #edbcfa;
   --c20: #2a1366;
-  --c21: #5e17eb10;
+  --c21: #35206f10;
   --c22: #a097c9;
   --c23: #aca3d3;
   --c24: #918caa;
@@ -228,26 +228,27 @@
   --c211: #1b0f3b66;
   --c212: #e9e7f6;
   --c213: #d8d2f2;
-  --c214: #5c5280;
-  --c215: #776e9b;
-  --c216: #3f7258;
-  --c217: #93652c;
-  --c218: #f5d1f6;
-  --c219: #eeebff;
-  --c220: #6b3dc6;
-  --c221: #a06a22;
-  --c222: #fff8ff;
-  --c223: #f9d6fb;
-  --c224: #e6f2eb;
-  --c225: #f9f8ff;
-  --c226: #00000033;
-  --c227: #fcbeff;
-  --c228: #fbfbfd;
-  --c229: #e0dafe;
-  --c230: #1b0f3b;
-  --c231: #5e17eb0a;
-  --c232: #ecdbed;
-  --c233: #7b5dcc;
+  --c214: #4b2d9c12;
+  --c215: #5c5280;
+  --c216: #776e9b;
+  --c217: #3f7258;
+  --c218: #93652c;
+  --c219: #f5d1f6;
+  --c220: #eeebff;
+  --c221: #6b3dc6;
+  --c222: #a06a22;
+  --c223: #fff8ff;
+  --c224: #f9d6fb;
+  --c225: #e6f2eb;
+  --c226: #f9f8ff;
+  --c227: #00000033;
+  --c228: #fcbeff;
+  --c229: #fbfbfd;
+  --c230: #e0dafe;
+  --c231: #1b0f3b;
+  --c232: #35206f0a;
+  --c233: #ecdbed;
+  --c234: #7b5dcc;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -469,26 +470,27 @@
   --c211: #000000cc;
   --c212: #33313c;
   --c213: #38334c;
-  --c214: #b9b3d6;
-  --c215: #9f99bb;
-  --c216: #91b6a1;
-  --c217: #b59b7f;
-  --c218: #452a46;
-  --c219: #14121e;
-  --c220: #b5a0fe;
-  --c221: #b3997d;
-  --c222: #0f091f;
-  --c223: #432945;
-  --c224: #150f26;
-  --c225: #0f0920;
-  --c226: #00000066;
-  --c227: #2f1631;
-  --c228: #0e081e;
-  --c229: #1d182f;
-  --c230: #dddaf7;
-  --c231: #ffffff0a;
-  --c232: #3d2f3d;
-  --c233: #b4a0ff;
+  --c214: #ffffff12;
+  --c215: #b9b3d6;
+  --c216: #9f99bb;
+  --c217: #91b6a1;
+  --c218: #b59b7f;
+  --c219: #452a46;
+  --c220: #14121e;
+  --c221: #b5a0fe;
+  --c222: #b3997d;
+  --c223: #0f091f;
+  --c224: #432945;
+  --c225: #150f26;
+  --c226: #0f0920;
+  --c227: #00000066;
+  --c228: #2f1631;
+  --c229: #0e081e;
+  --c230: #1d182f;
+  --c231: #dddaf7;
+  --c232: #ffffff0a;
+  --c233: #3d2f3d;
+  --c234: #b4a0ff;
 }
 :root {
 }
@@ -590,12 +592,12 @@ small {
   white-space: nowrap;
 }
 .primary {
-  background: #5e17eb;
+  background: #35206f;
   color: #ffffff;
   box-shadow: 0 3px 6px var(--c4);
 }
 .primary:hover {
-  background: #8c52ff;
+  background: #4b2d9c;
 }
 .secondary {
   background: var(--c5);
@@ -667,7 +669,7 @@ small {
   flex-shrink: 0;
   position: fixed;
   inset: 0 auto 0 0;
-  background: #5e17eb;
+  background: #35206f;
   color: #d7d4eb;
   padding: 30px 20px 0;
   display: flex;
@@ -1104,7 +1106,7 @@ nav button:hover:not(.active) {
   background: var(--c57);
 }
 .focus-card {
-  background: #5e17eb;
+  background: #35206f;
   border-radius: 10px;
   padding: 23px 25px;
   color: #f0eef9;
@@ -1320,7 +1322,7 @@ nav button:hover:not(.active) {
   left: 0;
   right: 0;
   height: 2px;
-  background: #8c52ff;
+  background: #4b2d9c;
   border-radius: 2px;
 }
 .task-tools {
@@ -1673,7 +1675,7 @@ summary {
   bottom: 25px;
   left: 50%;
   transform: translateX(-50%);
-  background: #5e17eb;
+  background: #35206f;
   color: #ffffff;
   padding: 14px 20px;
   border-radius: 9px;
@@ -1742,7 +1744,7 @@ summary {
   width: 4px;
   height: 7px;
   border-radius: 50%;
-  background: #5e17eb;
+  background: #35206f;
 }
 .smile {
   width: 11px;
@@ -1791,7 +1793,7 @@ summary {
 }
 .modal::backdrop,
 .drawer::backdrop {
-  background: #3d0d9e50;
+  background: #1f124750;
   backdrop-filter: blur(3px);
 }
 .modal h2 {
@@ -2113,7 +2115,7 @@ textarea::placeholder {
   background: var(--c5);
 }
 .welcome-story {
-  background: #5e17eb;
+  background: #35206f;
   color: #edbcfa;
   padding: 45px 55px;
   display: flex;
@@ -2194,7 +2196,7 @@ textarea::placeholder {
   left: 165px;
   height: 37px;
   width: 37px;
-  background: #8c52ff;
+  background: #4b2d9c;
   border: 1px solid #67579b;
   border-radius: 12px;
   display: grid;
@@ -2954,7 +2956,7 @@ textarea::placeholder {
 }
 .welcome-story {
   background:
-    radial-gradient(ellipse at 20% 80%, #8c52ff77, transparent 60%), #5e17eb;
+    radial-gradient(ellipse at 20% 80%, #4b2d9c77, transparent 60%), #35206f;
 }
 .primary {
   transition:
@@ -3131,7 +3133,7 @@ textarea::placeholder {
 .stats > .hero-stat {
   background:
     repeating-linear-gradient(135deg, #ffffff07 0 1px, transparent 1px 11px),
-    linear-gradient(150deg, #8c52ff, #5e17eb 70%);
+    linear-gradient(150deg, #4b2d9c, #35206f 70%);
   border-color: var(--c114);
   color: #ffffff;
 }
@@ -3165,7 +3167,7 @@ textarea::placeholder {
   width: 78px;
   height: 78px;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 38%, #8c52ff, #5e17eb 72%);
+  background: radial-gradient(circle at 50% 38%, #4b2d9c, #35206f 72%);
   border: 3px solid var(--c58);
   box-shadow:
     0 4px 0 var(--c181),
@@ -3698,7 +3700,7 @@ a.canvas-note strong {
   background:
     radial-gradient(ellipse 50% 70% at 85% 10%, #8c52ff55, transparent 70%),
     radial-gradient(ellipse 40% 60% at 8% 100%, #edbcfa1c, transparent 70%),
-    linear-gradient(160deg, #5e17eb 0%, #3d0d9e 100%);
+    linear-gradient(160deg, #35206f 0%, #1f1247 100%);
   border-radius: 0 0 0 36px;
 }
 .workspace::after {
@@ -3831,7 +3833,7 @@ a.canvas-note strong {
   transition: opacity 0.25s;
   background: radial-gradient(
     320px circle at var(--mx, 50%) var(--my, 50%),
-    #8c52ff12,
+    var(--c214),
     transparent 60%
   );
 }
@@ -3857,7 +3859,7 @@ a.canvas-note strong {
 .stats > div > span {
   font-size: 13px;
   font-weight: 650;
-  color: var(--c214);
+  color: var(--c215);
 }
 .stats strong {
   font-size: 44px;
@@ -3872,7 +3874,7 @@ a.canvas-note strong {
 }
 .stats > div > small {
   font-size: 12px;
-  color: var(--c215);
+  color: var(--c216);
 }
 .stat-note {
   font-size: 12px !important;
@@ -3880,15 +3882,15 @@ a.canvas-note strong {
   padding: 3px 9px;
   border-radius: 999px;
   background: var(--c52);
-  color: var(--c216) !important;
+  color: var(--c217) !important;
   vertical-align: middle;
 }
 .alert-stat .stat-note {
   background: var(--c50);
-  color: var(--c217) !important;
+  color: var(--c218) !important;
 }
 .alert-stat {
-  border-color: var(--c218) !important;
+  border-color: var(--c219) !important;
 }
 .stat-icon {
   display: grid;
@@ -3898,12 +3900,12 @@ a.canvas-note strong {
   border-radius: 10px;
 }
 .stat-icon.blue {
-  background: var(--c219);
-  color: var(--c220);
+  background: var(--c220);
+  color: var(--c221);
 }
 .stat-icon.amber {
   background: var(--c50);
-  color: var(--c221);
+  color: var(--c222);
 }
 .stat-icon.cream {
   background: var(--c5);
@@ -3911,8 +3913,8 @@ a.canvas-note strong {
   box-shadow: 0 1px 0 var(--c184);
 }
 .stats .cream-stat {
-  background: linear-gradient(160deg, var(--c222), var(--c19));
-  border-color: var(--c223);
+  background: linear-gradient(160deg, var(--c223), var(--c19));
+  border-color: var(--c224);
 }
 .stats > .hero-stat {
   display: flex;
@@ -3927,7 +3929,7 @@ a.canvas-note strong {
 }
 .stats > .hero-stat span,
 .stats > .hero-stat small {
-  color: var(--c214);
+  color: var(--c215);
 }
 .stats > .hero-stat strong {
   color: var(--c2);
@@ -4024,22 +4026,22 @@ a.canvas-note strong {
   justify-self: start;
 }
 .status.in_progress {
-  background: var(--c219);
+  background: var(--c220);
 }
 .status.done {
-  background: var(--c224);
+  background: var(--c225);
 }
 .task-row {
   transition: background 0.15s;
 }
 .task-row:hover {
-  background: var(--c225);
+  background: var(--c226);
 }
 /* Sidebar: deeper, with a glow and a clearer active state. */
 .sidebar {
   background:
-    radial-gradient(ellipse 120% 40% at 0% 100%, #8c52ff88, transparent 70%),
-    linear-gradient(180deg, #5e17eb, #3d0d9e);
+    radial-gradient(ellipse 120% 40% at 0% 100%, #4b2d9c88, transparent 70%),
+    linear-gradient(180deg, #35206f, #1f1247);
 }
 nav button {
   font-size: 13.5px;
@@ -4056,7 +4058,7 @@ nav button:hover:not(.active) {
 nav button.active {
   box-shadow:
     0 2px 0 var(--c209),
-    0 8px 20px var(--c226);
+    0 8px 20px var(--c227);
   font-weight: 750;
 }
 /* Pip in the overview band. */
@@ -4143,7 +4145,7 @@ nav button.active {
 }
 .welcome-story h1 em {
   font-style: normal;
-  background: linear-gradient(90deg, var(--c19), var(--c227));
+  background: linear-gradient(90deg, var(--c19), var(--c228));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -4248,7 +4250,7 @@ nav button.active {
   background:
     radial-gradient(ellipse 60% 45% at 100% 0%, #edbcfaaa, transparent 70%),
     radial-gradient(ellipse 50% 40% at 0% 100%, #e7e3feaa, transparent 70%),
-    var(--c228);
+    var(--c229);
 }
 .welcome-login .demo-badge {
   background: var(--c5);
@@ -4259,11 +4261,11 @@ nav button.active {
   height: 44px;
   font-size: 13px;
   font-weight: 800;
-  background: linear-gradient(150deg, var(--c219), var(--c229));
+  background: linear-gradient(150deg, var(--c220), var(--c230));
   color: var(--c7);
 }
 .profiles button:first-child .avatar {
-  background: linear-gradient(150deg, #8c52ff, #5e17eb);
+  background: linear-gradient(150deg, #4b2d9c, #35206f);
   color: #edbcfa;
 }
 @media (max-width: 650px) {
@@ -4291,7 +4293,7 @@ nav button.active {
    TeamTrack navy/cream palette only.
    ===================================================================== */
 :root {
-  --sticker: 2px solid var(--c230);
+  --sticker: 2px solid var(--c231);
 }
 body,
 .workspace {
@@ -4300,8 +4302,8 @@ body,
 /* Faint graph-paper grid under the content. */
 .workspace {
   background-image:
-    linear-gradient(var(--c231) 1px, transparent 1px),
-    linear-gradient(90deg, var(--c231) 1px, transparent 1px);
+    linear-gradient(var(--c232) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c232) 1px, transparent 1px);
   background-size: 32px 32px;
   min-height: 100vh;
 }
@@ -4407,7 +4409,7 @@ body,
   background: var(--c19);
 }
 .stat-icon {
-  border: 1.5px solid var(--c230);
+  border: 1.5px solid var(--c231);
   box-shadow: 2px 2px 0 var(--c147);
 }
 .stat-icon.cream {
@@ -4454,7 +4456,7 @@ body,
 }
 /* Panels stay clean for reading, with a slightly warmer edge. */
 .panel {
-  border-color: var(--c232);
+  border-color: var(--c233);
   border-radius: 18px;
 }
 .focus-card {
@@ -4503,14 +4505,14 @@ body,
   width: 70px;
   top: 22%;
   right: 3%;
-  fill: var(--c233) !important;
+  fill: var(--c234) !important;
   stroke: none;
 }
 .d-loop {
   width: 90px;
   top: 8%;
   left: 38%;
-  stroke: var(--c233);
+  stroke: var(--c234);
   stroke-width: 3;
 }
 .d-birds {
@@ -4571,7 +4573,7 @@ body,
 .profiles button:hover {
   transform: translate(-2px, -2px);
   box-shadow: 6px 6px 0 var(--c147);
-  border-color: var(--c230);
+  border-color: var(--c231);
 }
 .profiles button:active {
   transform: translate(3px, 3px);
@@ -4659,7 +4661,7 @@ a.canvas-note {
 .pip-hide {
   margin-top: 8px;
   font-size: 12px;
-  color: var(--c215);
+  color: var(--c216);
   text-decoration: underline;
   text-underline-offset: 2px;
   border-radius: 4px;
@@ -4672,4 +4674,56 @@ a.canvas-note {
   position: absolute;
   top: 20px;
   right: 20px;
+}
+/* Liquid glass: frosted, softly lit
+   surfaces instead of hard sticker outlines. */
+:root {
+  --glass-bg: linear-gradient(135deg, #ffffffeb, #ffffffc2);
+  --glass-tint: linear-gradient(135deg, #f6e2fcf0, #edbcfacc);
+  --glass-edge: #ffffffcc;
+  --glass-shine: inset 0 1px 0 #ffffffe6, inset 0 -1px 0 #5e17eb0f;
+  --glass-drop: 0 12px 32px #1f12471f, 0 2px 6px #1f124712;
+}
+:root[data-theme="dark"] {
+  --glass-bg: linear-gradient(135deg, #2a1d52b3, #1a1236a6);
+  --glass-tint: linear-gradient(135deg, #4a2c7ab3, #2e1b52a6);
+  --glass-edge: #ffffff24;
+  --glass-shine: inset 0 1px 0 #ffffff26, inset 0 -1px 0 #00000033;
+  --glass-drop: 0 14px 36px #00000066;
+}
+:root .workspace {
+  background-image:
+    radial-gradient(40% 30% at 85% 55%, #cb6ce62e, transparent 70%),
+    radial-gradient(35% 30% at 25% 75%, #8c52ff24, transparent 70%),
+    linear-gradient(var(--c4) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c4) 1px, transparent 1px);
+  background-size:
+    auto,
+    auto,
+    32px 32px,
+    32px 32px;
+}
+:root .stats > div,
+:root .project-strip,
+:root .panel,
+:root .pip-bubble,
+:root .page-heading .primary {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px) saturate(170%);
+  border: 1px solid var(--glass-edge) !important;
+  box-shadow: var(--glass-shine), var(--glass-drop) !important;
+}
+:root .stats > div {
+  transform: none;
+  border-radius: 22px;
+}
+:root .stats > div:hover {
+  transform: translateY(-3px);
+}
+:root .stats .cream-stat,
+:root .page-heading .primary {
+  background: var(--glass-tint) !important;
+}
+:root .pip-bubble {
+  transform: none;
 }
