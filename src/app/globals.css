@@ -5037,3 +5037,39 @@ nav button.active {
 .ring-fill {
   stroke: #8c52ff;
 }
+
+/* Cleanup pass: fewer competing details. */
+/* Hero band keeps one loop and one star; the rest of the doodles go. */
+.doodles--band .d-squiggle,
+.doodles--band .d-dots,
+.doodles--band .d-birds,
+.doodles--band .d-star.small {
+  display: none;
+}
+.doodles--band .d-loop,
+.doodles--band .d-star {
+  opacity: 0.55;
+}
+/* Stat cards: the label says it; drop the icon boxes. */
+.stats .stat-icon {
+  display: none;
+}
+.stat-note {
+  background: var(--chip-bg) !important;
+  color: var(--chip-ink) !important;
+}
+/* Focus card: glass edge instead of a heavy offset sticker shadow. */
+.focus-card {
+  border: 1px solid #ffffff1f !important;
+  border-radius: 22px !important;
+  box-shadow:
+    inset 0 1px 0 #ffffff26,
+    var(--glass-drop) !important;
+}
+/* Fainter page grid. */
+.workspace {
+  --c4: #2a136608;
+}
+:root[data-theme="dark"] .workspace {
+  --c4: #ffffff07;
+}
