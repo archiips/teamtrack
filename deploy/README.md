@@ -50,4 +50,6 @@ Manual deploy after checks: `npx vercel --prod --yes`. Automatic GitHub deployme
 4. Switch back to professor, refresh, inspect the recorded actor, evidence and event history.
 5. Canvas: open https://duct-groggy-kitten.ngrok-free.dev/courses/1 and click TeamTrack in course navigation. It launches embedded in Canvas, shows the course name, instructor role and "Roster synced". Use Sync Canvas roster, then Teams & people to create a team from the real roster.
 
+Pitch backup: `video/out/teamtrack-demo-short.mp4` (19s) and `video/out/teamtrack-demo.mp4` (60s) show the same flow if Canvas or the network is unavailable (see video/README.md).
+
 Canvas course data is separate from the synthetic demo; demo:reset never touches it. If the embedded frame misbehaves on another browser, the launch also works top-level at `/courses/1/external_tools/2?display=borderless`.
