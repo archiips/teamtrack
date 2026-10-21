@@ -4727,3 +4727,313 @@ a.canvas-note {
 :root .pip-bubble {
   transform: none;
 }
+/* =====================================================================
+   Calmer colour + glass folders + segmented progress (2026-10-21).
+   ===================================================================== */
+:root {
+  --seg-done: linear-gradient(180deg, #9b6dff, #6b2ff0);
+  --seg-flow-a: #b99bff;
+  --seg-flow-b: #d6c4ff;
+  --seg-blocked: #e2a656;
+  --seg-empty: #5e17eb12;
+  --seg-empty-edge: #5e17eb24;
+  --chip-bg: #5e17eb0d;
+  --chip-ink: #4a3a75;
+  --avatar-bg: #ece3ff;
+  --avatar-ink: #4b2d9c;
+  --folder-back: linear-gradient(180deg, #e6d9ff, #d8c7fb);
+  --sheet-bg: #ffffff;
+  --sheet-ink: #2a1366;
+  --sheet-meta: #7a6aa3;
+}
+:root[data-theme="dark"] {
+  --seg-done: linear-gradient(180deg, #a985ff, #7b45f5);
+  --seg-flow-a: #6c4cc4;
+  --seg-flow-b: #8a6be0;
+  --seg-blocked: #d29a52;
+  --seg-empty: #ffffff10;
+  --seg-empty-edge: #ffffff1c;
+  --chip-bg: #ffffff0f;
+  --chip-ink: #d8ccf5;
+  --avatar-bg: #2f2357;
+  --avatar-ink: #d9c9ff;
+  --folder-back: linear-gradient(180deg, #33256a, #261b4f);
+  --sheet-bg: #3a2d6b;
+  --sheet-ink: #f1eaff;
+  --sheet-meta: #b9a8e6;
+}
+
+/* One quiet avatar colour instead of four. */
+.avatar.blue,
+.avatar.purple,
+.avatar.green,
+.avatar.orange {
+  background: var(--avatar-bg);
+  color: var(--avatar-ink);
+}
+
+/* Reason chips: neutral glass with a small status dot. */
+.attention-tag,
+.clear-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+}
+.attention-tag::before,
+.clear-tag::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--seg-blocked);
+}
+.clear-tag::before {
+  background: #3f9b74;
+}
+
+/* Softer lilac tint on highlighted glass. */
+:root {
+  --glass-tint: linear-gradient(135deg, #fbf5fef2, #f0e3fbd9);
+}
+
+/* Segmented progress: one capsule per task. */
+.status-bar {
+  gap: 3px;
+  height: 9px;
+  max-width: 300px;
+  background: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.status-bar i {
+  flex: 1 1 0;
+  min-width: 0 !important;
+  border-radius: 999px;
+}
+.status-bar .done,
+.legend .done {
+  background: var(--seg-done);
+}
+.status-bar .in_progress,
+.legend .in_progress {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--seg-flow-a) 0 5px,
+    var(--seg-flow-b) 5px 10px
+  );
+  background-size: 28px 100%;
+}
+.status-bar .blocked,
+.legend .blocked {
+  background: var(--seg-blocked);
+}
+.status-bar .todo,
+.legend .todo {
+  background: var(--seg-empty);
+  box-shadow: inset 0 0 0 1px var(--seg-empty-edge);
+}
+.legend i {
+  border-radius: 999px;
+}
+.motion-ok .status-bar .in_progress {
+  animation:
+    grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    seg-flow 1.4s linear infinite;
+}
+@keyframes seg-flow {
+  to {
+    background-position: 28px 0;
+  }
+}
+
+/* "In progress" status dot breathes. */
+.status.in_progress > span {
+  background: #8c52ff;
+}
+.motion-ok .status.in_progress > span {
+  animation: dot-pulse 1.8s ease-out infinite;
+}
+@keyframes dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 #8c52ff66;
+  }
+  100% {
+    box-shadow: 0 0 0 6px #8c52ff00;
+  }
+}
+
+/* Glass folders. */
+.folder {
+  position: relative;
+  display: block;
+  padding-top: 46px;
+  isolation: isolate;
+}
+.folder-back {
+  position: absolute;
+  inset: 16px 0 0 0;
+  border-radius: 6px 24px 24px 24px;
+  background: var(--folder-back);
+  box-shadow: var(--glass-drop);
+  z-index: -2;
+}
+.folder-back::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -16px;
+  width: 42%;
+  height: 34px;
+  border-radius: 16px 22px 0 0;
+  background: var(--folder-back);
+}
+.folder-sheets {
+  position: absolute;
+  inset: 4px 7% auto;
+  height: 72px;
+  z-index: -1;
+}
+.folder-sheet {
+  position: absolute;
+  left: calc(var(--i) * -3% + 2%);
+  right: calc(var(--i) * 4% + 2%);
+  top: calc(18px - var(--i) * 9px);
+  height: 64px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 13px;
+  border-radius: 12px;
+  background: var(--sheet-bg);
+  color: var(--sheet-ink);
+  box-shadow:
+    0 1px 0 #ffffff80 inset,
+    0 4px 12px #1f12471f;
+  font-size: 11px;
+  opacity: calc(1 - var(--i) * 0.18);
+  transform: rotate(calc(var(--i) * -1.4deg));
+  transform-origin: left bottom;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.folder-sheet > i {
+  display: block;
+  width: 46%;
+  height: 4px;
+  margin-top: 2px;
+  border-radius: 4px;
+  background: var(--seg-empty-edge);
+}
+.folder-sheet b {
+  font-weight: 650;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.folder-sheet small {
+  flex: none;
+  color: var(--sheet-meta);
+  font-size: 10px;
+}
+.folder:hover .folder-sheet,
+.folder-tile:focus-visible .folder-sheet {
+  transform: translateY(calc(-6px - var(--i) * 4px))
+    rotate(calc(var(--i) * -4deg));
+}
+.folder-front {
+  position: relative;
+  display: block;
+}
+@media (prefers-reduced-motion: reduce) {
+  .folder-sheet {
+    transition: none;
+  }
+}
+
+/* Overview: teams as folder tiles. */
+.team-folders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 22px;
+  padding: 8px 22px 22px;
+}
+.folder-tile {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 24px;
+}
+.folder-tile:focus-visible {
+  outline: 3px solid #8c52ff;
+  outline-offset: 4px;
+}
+.folder-tile .folder-front {
+  display: grid;
+  gap: 4px;
+  padding: 18px 20px 16px;
+  border-radius: 6px 22px 22px 22px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(170%);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shine);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.folder-tile:hover .folder-front {
+  transform: translateY(2px);
+}
+.folder-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.folder-head strong {
+  font-family: var(--font-display), Manrope, sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+.folder-count {
+  font-size: 12px;
+  color: var(--chip-ink);
+}
+.folder-count b {
+  font-family: var(--font-display), Manrope, sans-serif;
+  font-size: 20px;
+  color: var(--ink);
+  margin-right: 2px;
+}
+.folder-count .dot {
+  margin: 0 6px;
+}
+.folder-tile .reason-chips {
+  justify-content: flex-start;
+  max-width: none;
+  margin-top: 2px;
+}
+
+/* Teams page and agreement: the panel is the folder's front. */
+.team-folder > .folder-front > .panel,
+.agreement-folder > .folder-front > .panel {
+  border-radius: 6px 24px 24px 24px;
+  margin: 0;
+}
+
+/* Quieter accents: glass active nav, violet completion ring. */
+nav button.active {
+  background: #ffffff1f !important;
+  color: #ffffff !important;
+  box-shadow:
+    inset 0 1px 0 #ffffff33,
+    inset 0 0 0 1px #ffffff26 !important;
+}
+.ring-fill {
+  stroke: #8c52ff;
+}

@@ -13,6 +13,7 @@ import { memberBreakdown, teamHealth } from "@/lib/insights";
 import { Doodles } from "@/components/doodles";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Folder } from "@/components/folder";
 import {
   CountUp,
   Ring,
@@ -303,6 +304,15 @@ export default function Page() {
           filter === t.status) &&
         t.title.toLowerCase().includes(query.toLowerCase()),
     );
+  // Open tasks peeking out of a team's folder.
+  const openSheets = (id: string) =>
+    s.tasks
+      .filter((t) => t.teamId === id && t.status !== "done")
+      .slice(0, 3)
+      .map((t) => ({
+        title: t.title,
+        meta: s.users.find((u) => u.id === t.ownerId)?.name.split(" ")[0],
+      }));
   const nav = [
     {
       id: "overview",
@@ -847,7 +857,7 @@ export default function Page() {
                       </button>
                     </div>
                     {prof ? (
-                      <div className="team-overview">
+                      <div className="team-overview team-folders">
                         {s.teams.map((t) => {
                           const h = teamHealth(s, t, today()),
                             reasons = [
@@ -859,41 +869,42 @@ export default function Page() {
                           return (
                             <button
                               key={t.id}
-                              className="team-summary"
+                              className="folder-tile"
                               onClick={() => {
                                 setTeamId(t.id);
                                 setView("tasks");
                               }}
                             >
-                              <span className="avatar-stack">
-                                {s.users
-                                  .filter((u) => t.memberIds.includes(u.id))
-                                  .slice(0, 4)
-                                  .map((u) => (
-                                    <Avatar key={u.id} user={u} small />
-                                  ))}
-                              </span>
-                              <div>
-                                <strong>{t.name}</strong>
-                                <StatusBar mix={h} label={mixLabel(h)} />
-                                <span>
-                                  {h.done} of {h.total} tasks done{" "}
-                                  <span className="dot">·</span>{" "}
+                              <Folder inline sheets={openSheets(t.id)}>
+                                <span className="folder-head">
+                                  <strong>{t.name}</strong>
+                                  <span className="avatar-stack">
+                                    {s.users
+                                      .filter((u) => t.memberIds.includes(u.id))
+                                      .slice(0, 4)
+                                      .map((u) => (
+                                        <Avatar key={u.id} user={u} small />
+                                      ))}
+                                  </span>
+                                </span>
+                                <span className="folder-count">
+                                  <b>{h.done}</b> / {h.total} tasks done
+                                  <span className="dot">·</span>
                                   {t.memberIds.length} members
                                 </span>
-                              </div>
-                              <span className="reason-chips">
-                                {reasons.length ? (
-                                  reasons.map((r) => (
-                                    <span key={r} className="attention-tag">
-                                      {r}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="clear-tag">On track</span>
-                                )}
-                              </span>
-                              <ChevronRight size={17} />
+                                <StatusBar mix={h} label={mixLabel(h)} />
+                                <span className="reason-chips">
+                                  {reasons.length ? (
+                                    reasons.map((r) => (
+                                      <span key={r} className="attention-tag">
+                                        {r}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="clear-tag">On track</span>
+                                  )}
+                                </span>
+                              </Folder>
                             </button>
                           );
                         })}
@@ -1146,145 +1157,165 @@ export default function Page() {
             {view === "team" && (
               <div className="team-grid">
                 {(prof ? s.teams : [team]).filter(Boolean).map((t) => (
-                  <section className="panel" key={t.id}>
-                    <div className="panel-title">
-                      <div>
-                        <h2>{t.name}</h2>
-                        <p>{t.memberIds.length} people, one shared project.</p>
+                  <Folder
+                    key={t.id}
+                    className="team-folder"
+                    sheets={openSheets(t.id)}
+                  >
+                    <section className="panel">
+                      <div className="panel-title">
+                        <div>
+                          <h2>{t.name}</h2>
+                          <p>
+                            {t.memberIds.length} people, one shared project.
+                          </p>
+                        </div>
+                        <span className="team-emblem">
+                          <Compass size={24} />
+                        </span>
                       </div>
-                      <span className="team-emblem">
-                        <Compass size={24} />
-                      </span>
-                    </div>
-                    <MemberBreakdown
-                      rows={memberBreakdown(s, t)}
-                      userId={userId}
-                      avatar={(r) => <Avatar user={r.user} />}
-                    />
-                    <div className="panel-foot">
-                      Counts describe recorded activity. Review the work for
-                      context.
-                    </div>
-                    <button
-                      className="panel-action"
-                      onClick={() => {
-                        setTeamId(t.id);
-                        setView("tasks");
-                      }}
-                    >
-                      Open team workspace
-                      <ArrowRight size={16} />
-                    </button>
-                  </section>
+                      <MemberBreakdown
+                        rows={memberBreakdown(s, t)}
+                        userId={userId}
+                        avatar={(r) => <Avatar user={r.user} />}
+                      />
+                      <div className="panel-foot">
+                        Counts describe recorded activity. Review the work for
+                        context.
+                      </div>
+                      <button
+                        className="panel-action"
+                        onClick={() => {
+                          setTeamId(t.id);
+                          setView("tasks");
+                        }}
+                      >
+                        Open team workspace
+                        <ArrowRight size={16} />
+                      </button>
+                    </section>
+                  </Folder>
                 ))}
               </div>
             )}
             {view === "agreement" && team && (
               <div className="agreement-grid">
-                <section className="panel agreement-body">
-                  <div className="panel-title">
-                    <div>
-                      <span className="version">
-                        Version {team.agreementVersion}
-                      </span>
-                      <h2>How we work together</h2>
-                      <p>Our shared expectations for {team.name}.</p>
-                    </div>
-                    <FileCheck2 size={28} />
-                  </div>
-                  <div className="agreement-text">
-                    {team.agreement.split("\n").map((line, i) => (
-                      <p key={i}>
-                        <CheckCircle2 size={19} />
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                  {team.memberIds.includes(userId) &&
-                    (team.accepted.includes(userId) ? (
-                      <div className="accepted">
-                        <CheckCircle2 size={20} />
-                        You’ve accepted this agreement.
+                <Folder
+                  className="agreement-folder"
+                  sheets={(team.agreementHistory || [])
+                    .filter((v) => v.version !== team.agreementVersion)
+                    .slice(-3)
+                    .reverse()
+                    .map((v) => ({
+                      title: `Version ${v.version}`,
+                      meta: `${v.accepted.length} accepted`,
+                    }))}
+                >
+                  <section className="panel agreement-body">
+                    <div className="panel-title">
+                      <div>
+                        <span className="version">
+                          Version {team.agreementVersion}
+                        </span>
+                        <h2>How we work together</h2>
+                        <p>Our shared expectations for {team.name}.</p>
                       </div>
-                    ) : (
-                      <button
-                        className="primary"
-                        disabled={busy}
-                        onClick={() =>
-                          command(
-                            {
-                              type: "agreement.accept",
-                              teamId: team.id,
-                              version: team.agreementVersion,
-                            },
-                            "Agreement accepted",
-                          )
-                        }
-                      >
-                        <Check size={17} />
-                        Accept this agreement
-                      </button>
-                    ))}
-                  {team.agreementHistory?.length ? (
-                    <details className="agreement-edit">
-                      <summary>Previous versions</summary>
-                      {team.agreementHistory.map((h) => (
-                        <div key={h.version}>
-                          <h3>Version {h.version}</h3>
-                          <p style={{ whiteSpace: "pre-wrap" }}>{h.body}</p>
-                          <p>
-                            Accepted by:{" "}
-                            {h.accepted
-                              .map(
-                                (id) =>
-                                  s.users.find((u) => u.id === id)?.name ||
-                                  "Former member",
-                              )
-                              .join(", ") || "No acceptances recorded"}
-                          </p>
-                        </div>
+                      <FileCheck2 size={28} />
+                    </div>
+                    <div className="agreement-text">
+                      {team.agreement.split("\n").map((line, i) => (
+                        <p key={i}>
+                          <CheckCircle2 size={19} />
+                          {line}
+                        </p>
                       ))}
-                    </details>
-                  ) : null}
-                  <details className="agreement-edit">
-                    <summary>Update our agreement</summary>
-                    <p>
-                      Publishing a new version asks every member to accept
-                      again.
-                    </p>
-                    <form
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        const f = new FormData(e.currentTarget);
-                        if (
-                          confirm(
-                            "Publish a new agreement version? Everyone will need to accept again.",
+                    </div>
+                    {team.memberIds.includes(userId) &&
+                      (team.accepted.includes(userId) ? (
+                        <div className="accepted">
+                          <CheckCircle2 size={20} />
+                          You’ve accepted this agreement.
+                        </div>
+                      ) : (
+                        <button
+                          className="primary"
+                          disabled={busy}
+                          onClick={() =>
+                            command(
+                              {
+                                type: "agreement.accept",
+                                teamId: team.id,
+                                version: team.agreementVersion,
+                              },
+                              "Agreement accepted",
+                            )
+                          }
+                        >
+                          <Check size={17} />
+                          Accept this agreement
+                        </button>
+                      ))}
+                    {team.agreementHistory?.length ? (
+                      <details className="agreement-edit">
+                        <summary>Previous versions</summary>
+                        {team.agreementHistory.map((h) => (
+                          <div key={h.version}>
+                            <h3>Version {h.version}</h3>
+                            <p style={{ whiteSpace: "pre-wrap" }}>{h.body}</p>
+                            <p>
+                              Accepted by:{" "}
+                              {h.accepted
+                                .map(
+                                  (id) =>
+                                    s.users.find((u) => u.id === id)?.name ||
+                                    "Former member",
+                                )
+                                .join(", ") || "No acceptances recorded"}
+                            </p>
+                          </div>
+                        ))}
+                      </details>
+                    ) : null}
+                    <details className="agreement-edit">
+                      <summary>Update our agreement</summary>
+                      <p>
+                        Publishing a new version asks every member to accept
+                        again.
+                      </p>
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const f = new FormData(e.currentTarget);
+                          if (
+                            confirm(
+                              "Publish a new agreement version? Everyone will need to accept again.",
+                            )
                           )
-                        )
-                          await command(
-                            {
-                              type: "agreement.publish",
-                              version: team.agreementVersion,
-                              teamId: team.id,
-                              body: f.get("body"),
-                            },
-                            "New agreement published",
-                          );
-                      }}
-                    >
-                      <textarea
-                        name="body"
-                        aria-label="Agreement text"
-                        defaultValue={team.agreement}
-                        required
-                        maxLength={12000}
-                      />
-                      <button className="secondary" disabled={busy}>
-                        Publish new version
-                      </button>
-                    </form>
-                  </details>
-                </section>
+                            await command(
+                              {
+                                type: "agreement.publish",
+                                version: team.agreementVersion,
+                                teamId: team.id,
+                                body: f.get("body"),
+                              },
+                              "New agreement published",
+                            );
+                        }}
+                      >
+                        <textarea
+                          name="body"
+                          aria-label="Agreement text"
+                          defaultValue={team.agreement}
+                          required
+                          maxLength={12000}
+                        />
+                        <button className="secondary" disabled={busy}>
+                          Publish new version
+                        </button>
+                      </form>
+                    </details>
+                  </section>
+                </Folder>
                 <section className="panel">
                   <div className="panel-title">
                     <div>

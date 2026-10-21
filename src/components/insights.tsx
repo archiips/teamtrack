@@ -4,30 +4,53 @@ import { Check, ChevronDown, Flag, Users } from "lucide-react";
 import type { MemberRow } from "@/lib/insights";
 import type { Team } from "@/lib/types";
 
-type Mix = { done: number; inProgress: number; todo: number; total: number };
+type Mix = {
+  done: number;
+  inProgress: number;
+  todo: number;
+  total: number;
+  blocked?: number;
+};
 
-/** Segmented bar of task status. Always paired with a text label. */
+// Above this many tasks the segments would be slivers; fall back to proportional runs.
+const MAX_SEGMENTS = 14;
+
+/** One segment per task, ordered done → blocked → in progress → to do. Always paired with a text label. */
 export function StatusBar({ mix, label }: { mix: Mix; label: string }) {
-  const pct = (n: number) => (mix.total ? (n / mix.total) * 100 : 0);
+  const blocked = Math.min(mix.blocked || 0, mix.total - mix.done),
+    // Blocked tasks are open tasks; count them out of in-progress first, then to-do.
+    inProgress = Math.max(0, mix.inProgress - blocked),
+    todo = Math.max(0, mix.total - mix.done - blocked - inProgress),
+    runs = [
+      ["done", mix.done],
+      ["blocked", blocked],
+      ["in_progress", inProgress],
+      ["todo", todo],
+    ] as const;
   return (
-    <span className="status-bar" role="img" aria-label={label} title={label}>
-      {mix.total ? (
-        <>
-          <i className="done" style={{ width: `${pct(mix.done)}%` }} />
-          <i
-            className="in_progress"
-            style={{ width: `${pct(mix.inProgress)}%` }}
-          />
-          <i className="todo" style={{ width: `${pct(mix.todo)}%` }} />
-        </>
-      ) : null}
+    <span
+      className={`status-bar${mix.total > MAX_SEGMENTS ? " dense" : ""}`}
+      role="img"
+      aria-label={label}
+      title={label}
+    >
+      {mix.total > MAX_SEGMENTS
+        ? runs.map(([k, n]) =>
+            n ? <i key={k} className={k} style={{ flexGrow: n }} /> : null,
+          )
+        : runs.flatMap(([k, n]) =>
+            Array.from({ length: n }, (_, i) => (
+              <i key={k + i} className={k} />
+            )),
+          )}
     </span>
   );
 }
 
 export function mixLabel(m: Mix) {
   return m.total
-    ? `${m.done} done, ${m.inProgress} in progress, ${m.todo} to do`
+    ? `${m.done} done, ${m.inProgress} in progress, ${m.todo} to do` +
+        (m.blocked ? `, ${m.blocked} blocked` : "")
     : "No tasks assigned yet";
 }
 
@@ -78,6 +101,10 @@ export function MemberBreakdown({
         <span>
           <i className="in_progress" />
           In progress
+        </span>
+        <span>
+          <i className="blocked" />
+          Blocked
         </span>
         <span>
           <i className="todo" />
