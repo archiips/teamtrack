@@ -21,8 +21,11 @@ export async function POST(req: Request) {
       path: "/",
     });
     return res;
-  } catch(error) {
-    console.warn("LTI_VERIFY_REJECTED",error instanceof Error?error.message:"Unknown verification failure");
+  } catch (error) {
+    console.warn(
+      "LTI_VERIFY_REJECTED",
+      error instanceof Error ? error.message : "Unknown verification failure",
+    );
     return NextResponse.json(
       {
         error:

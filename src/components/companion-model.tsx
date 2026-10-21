@@ -47,31 +47,31 @@ export default function CompanionModel({
     const scene = new THREE.Scene(),
       camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
     camera.position.set(0, 0.15, 6.2);
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x22396f, 3));
-    const light = new THREE.DirectionalLight(0xfff5d9, 5);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x5e17eb, 3));
+    const light = new THREE.DirectionalLight(0xfff6fb, 5);
     light.position.set(-3, 5, 5);
     scene.add(light);
-    const rim = new THREE.DirectionalLight(0x7d9fed, 3);
+    const rim = new THREE.DirectionalLight(0xb088ff, 3);
     rim.position.set(4, 1, -2);
     scene.add(rim);
     const character = new THREE.Group();
     scene.add(character);
     const cream = new THREE.MeshStandardMaterial({
-      color: 0xfcf1d0,
+      color: 0xfbf6f1,
       roughness: 0.25,
       metalness: 0.12,
     });
     const navy = new THREE.MeshStandardMaterial({
-      color: 0x0d1c42,
+      color: 0x1b0f3b,
       roughness: 0.3,
     });
     const blue = new THREE.MeshStandardMaterial({
-      color: 0x5674b2,
+      color: 0x8c52ff,
       roughness: 0.28,
       metalness: 0.15,
     });
     const gold = new THREE.MeshStandardMaterial({
-      color: 0xd7b96e,
+      color: 0xcb6ce6,
       roughness: 0.3,
       metalness: 0.45,
     });
@@ -138,7 +138,7 @@ export default function CompanionModel({
     const orbit = new THREE.Mesh(
       new THREE.TorusGeometry(1.5, 0.012, 8, 90),
       new THREE.MeshBasicMaterial({
-        color: hero ? 0x60739b : 0xc2cce1,
+        color: hero ? 0xb088ff : 0xd9c6f5,
         transparent: true,
         opacity: 0.4,
       }),
@@ -155,7 +155,7 @@ export default function CompanionModel({
     const shadow = new THREE.Mesh(
       new THREE.CircleGeometry(0.7, 40),
       new THREE.MeshBasicMaterial({
-        color: 0x010736,
+        color: 0x1b0f3b,
         transparent: true,
         opacity: hero ? 0.2 : 0.08,
       }),

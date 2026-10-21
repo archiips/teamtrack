@@ -12,6 +12,7 @@ import {
 import { memberBreakdown, teamHealth } from "@/lib/insights";
 import { Doodles } from "@/components/doodles";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   CountUp,
   Ring,
@@ -238,6 +239,9 @@ export default function Page() {
           </span>
         </section>
         <section className="welcome-login">
+          <div className="welcome-theme">
+            <ThemeToggle />
+          </div>
           <div className="demo-badge">
             <span />
             Interactive class demo
@@ -582,6 +586,7 @@ export default function Page() {
             >
               <RefreshCw size={17} />
             </button>
+            <ThemeToggle />
             <Avatar user={me} small />
           </div>
         </header>
