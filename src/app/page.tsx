@@ -5,11 +5,12 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
   MemberBreakdown,
+  mixLabel,
   StatusBar,
   TeamMenu,
-  mixLabel,
+  TeamProgressChart,
 } from "@/components/insights";
-import { memberBreakdown, teamHealth } from "@/lib/insights";
+import { courseProgress, memberBreakdown, teamHealth } from "@/lib/insights";
 import { Doodles } from "@/components/doodles";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -842,6 +843,15 @@ export default function Page() {
                     </small>
                   </div>
                 </div>
+                {prof && s.teams.length > 0 && (
+                  <TeamProgressChart
+                    rows={courseProgress(s, today())}
+                    onOpen={(id) => {
+                      setTeamId(id);
+                      setView("tasks");
+                    }}
+                  />
+                )}
                 <div className="overview-grid">
                   <section className="panel main-panel">
                     <div className="panel-title">

@@ -5092,3 +5092,89 @@ nav button.active {
     left: 0;
   }
 }
+
+/* Professor: all-team progress chart (reuses status-bar segments and legend). */
+.progress-chart {
+  margin-bottom: 22px;
+}
+.progress-rows {
+  padding: 6px 12px 10px;
+}
+.progress-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 96px 104px;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  background: none;
+  text-align: left;
+  color: inherit;
+  transition: background 0.15s;
+}
+.progress-row:hover {
+  background: var(--c47);
+}
+.progress-name {
+  font-weight: 750;
+  font-size: 15px;
+}
+.progress-row .status-bar {
+  max-width: none;
+  height: 14px;
+  margin: 0;
+}
+.progress-count {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--c155);
+  white-space: nowrap;
+}
+.progress-count strong {
+  font-size: 17px;
+  font-weight: 800;
+}
+.progress-chart .panel-foot .legend {
+  padding: 0;
+}
+.progress-flag {
+  display: flex;
+  justify-content: flex-end;
+}
+.progress-chart .legend span {
+  white-space: nowrap;
+}
+.progress-chart .legend {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+@media (max-width: 650px) {
+  .progress-rows {
+    padding: 4px 6px 8px;
+  }
+  .progress-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+  }
+  .progress-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .progress-row .status-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .progress-flag {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-content: flex-start;
+  }
+  .progress-flag:empty {
+    display: none;
+  }
+}

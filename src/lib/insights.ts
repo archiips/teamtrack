@@ -45,3 +45,8 @@ export function teamHealth(s: State, team: Team, today: string) {
       .length,
   };
 }
+
+/** Every team's status mix for the professor's chart, in course order (no ranking). */
+export function courseProgress(s: State, today: string) {
+  return s.teams.map((team) => ({ team, health: teamHealth(s, team, today) }));
+}

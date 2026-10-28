@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { memberBreakdown, teamHealth } from "../src/lib/insights";
+import {
+  courseProgress,
+  memberBreakdown,
+  teamHealth,
+} from "../src/lib/insights";
 import type { State } from "../src/lib/types";
 
 const base: State = {
@@ -121,5 +125,22 @@ describe("teamHealth", () => {
       overdue: 0,
       pendingAgreement: 0,
     });
+  });
+});
+
+describe("courseProgress", () => {
+  it("gives one row per team in course order, never sorted by output", () => {
+    const rows = courseProgress(base, "2026-10-13");
+    expect(rows.map((r) => r.team.id)).toEqual(["t1", "t2"]);
+    expect(rows[0].health).toMatchObject({ done: 2, total: 4, blocked: 1 });
+    expect(rows[1].health).toMatchObject({ done: 1, total: 1 });
+  });
+
+  it("keeps teams with no tasks so the professor sees them", () => {
+    const empty = {
+      ...base,
+      teams: [...base.teams, { ...base.teams[1], id: "t3", memberIds: [] }],
+    };
+    expect(courseProgress(empty, "2026-10-13")[2].health.total).toBe(0);
   });
 });

@@ -93,25 +93,78 @@ export function MemberBreakdown({
           </div>
         </div>
       ))}
-      <div className="legend" aria-hidden="true">
-        <span>
-          <i className="done" />
-          Done
-        </span>
-        <span>
-          <i className="in_progress" />
-          In progress
-        </span>
-        <span>
-          <i className="blocked" />
-          Blocked
-        </span>
-        <span>
-          <i className="todo" />
-          To do
-        </span>
-      </div>
+      <StatusLegend />
     </div>
+  );
+}
+
+export function StatusLegend() {
+  return (
+    <div className="legend" aria-hidden="true">
+      <span>
+        <i className="done" />
+        Done
+      </span>
+      <span>
+        <i className="in_progress" />
+        In progress
+      </span>
+      <span>
+        <i className="blocked" />
+        Blocked
+      </span>
+      <span>
+        <i className="todo" />
+        To do
+      </span>
+    </div>
+  );
+}
+
+/** Professor view: every team's progress side by side, in course order. */
+export function TeamProgressChart({
+  rows,
+  onOpen,
+}: {
+  rows: { team: Team; health: Mix & { overdue: number } }[];
+  onOpen: (teamId: string) => void;
+}) {
+  return (
+    <section
+      className="panel progress-chart"
+      aria-labelledby="progress-chart-title"
+    >
+      <div className="panel-title">
+        <div>
+          <h2 id="progress-chart-title">Team progress</h2>
+          <p>Every team&rsquo;s recorded tasks, side by side.</p>
+        </div>
+      </div>
+      <div className="progress-rows">
+        {rows.map(({ team, health: h }) => (
+          <button
+            key={team.id}
+            className="progress-row"
+            onClick={() => onOpen(team.id)}
+            aria-label={`${team.name}: ${mixLabel(h)}. Open team tasks`}
+          >
+            <span className="progress-name">{team.name}</span>
+            <StatusBar mix={h} label={mixLabel(h)} />
+            <span className="progress-count">
+              <strong>{h.done}</strong> / {h.total} done
+            </span>
+            <span className="progress-flag">
+              {h.overdue > 0 && (
+                <small className="attention-tag">{h.overdue} overdue</small>
+              )}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="panel-foot">
+        <StatusLegend />
+      </div>
+    </section>
   );
 }
 
