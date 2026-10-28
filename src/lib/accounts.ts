@@ -21,16 +21,21 @@ function matches(password: string, stored: string) {
 }
 
 let ready: Promise<unknown> | undefined;
-async function accounts() {
-  if (!sql) return;
+async function account(email: string) {
+  if (!sql) return undefined;
   await init();
-  ready ??= (async () => {
-    await sql`CREATE TABLE IF NOT EXISTS teamtrack_account (email text PRIMARY KEY, user_id text NOT NULL, namespace text NOT NULL, password_hash text NOT NULL)`;
-    for (const u of seed().users)
-      if (u.email)
-        await sql`INSERT INTO teamtrack_account VALUES (${u.email},${u.id},'demo',${hash(demoPassword())}) ON CONFLICT DO NOTHING`;
-  })();
+  ready ??= sql`CREATE TABLE IF NOT EXISTS teamtrack_account (email text PRIMARY KEY, user_id text NOT NULL, namespace text NOT NULL, password_hash text NOT NULL)`;
   await ready;
+  const find = () =>
+    sql!`SELECT user_id,namespace,password_hash FROM teamtrack_account WHERE email=${email}`;
+  let rows = await find();
+  // Demo accounts are created on first use, so they come back after demo:reset clears them.
+  const demo = seed().users.find((u) => u.email === email);
+  if (!rows[0] && demo) {
+    await sql`INSERT INTO teamtrack_account VALUES (${email},${demo.id},'demo',${hash(demoPassword())}) ON CONFLICT DO NOTHING`;
+    rows = await find();
+  }
+  return rows[0];
 }
 
 /** Returns the account for these credentials, or null. */
@@ -38,13 +43,11 @@ export async function verifyLogin(email: string, password: string) {
   const address = email.trim().toLowerCase();
   if (!address || !password || password.length > 200) return null;
   if (sql) {
-    await accounts();
-    const rows =
-      await sql`SELECT user_id,namespace,password_hash FROM teamtrack_account WHERE email=${address}`;
-    if (!rows[0] || !matches(password, rows[0].password_hash)) return null;
+    const row = await account(address);
+    if (!row || !matches(password, row.password_hash)) return null;
     return {
-      userId: rows[0].user_id as string,
-      namespace: rows[0].namespace as string,
+      userId: row.user_id as string,
+      namespace: row.namespace as string,
     };
   }
   if (process.env.VERCEL) throw Error("Database is not configured");
