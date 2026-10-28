@@ -8,6 +8,7 @@ export const sql = process.env.DATABASE_URL
       ssl: "require",
       max: 3,
       prepare: false,
+      onnotice: () => {},
     })
   : null;
 let ready: Promise<unknown> | undefined;

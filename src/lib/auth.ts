@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-function key() {
+export function sessionKey() {
   const s = process.env.SESSION_SECRET;
   if (!s && process.env.VERCEL) throw Error("Session secret missing");
   return new TextEncoder().encode(
@@ -13,13 +13,15 @@ export async function createSession(userId: string, namespace = "demo") {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("8h")
-    .sign(key());
+    .sign(sessionKey());
   return { token, csrf };
 }
 export async function session() {
   const token = (await cookies()).get("tt_session")?.value;
-  if (!token) throw Error("Please choose a demo profile");
-  const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"] });
+  if (!token) throw Error("Please sign in");
+  const { payload } = await jwtVerify(token, sessionKey(), {
+    algorithms: ["HS256"],
+  });
   if (typeof payload.userId !== "string" || typeof payload.csrf !== "string")
     throw Error("Invalid session");
   return {

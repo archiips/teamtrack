@@ -1,6 +1,8 @@
 export type User = {
   id: string;
   name: string;
+  /** Sign-in email (synthetic demo accounts only). */
+  email?: string;
   role: "instructor" | "student";
   initials: string;
   color: string;

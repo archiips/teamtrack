@@ -1,10 +1,17 @@
 import { describe, it, expect } from "vitest";
 const base = process.env.TEST_BASE_URL || "http://localhost:3000";
+const password = process.env.DEMO_PASSWORD || "teamtrack474";
+const emails: Record<string, string> = {
+  p1: "morgan@teamtrack.test",
+  s1: "alex@teamtrack.test",
+  s2: "jordan@teamtrack.test",
+  s5: "sam@teamtrack.test",
+};
 async function login(userId: string) {
-  const r = await fetch(base + "/api/demo/login", {
+  const r = await fetch(base + "/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: base },
-    body: JSON.stringify({ userId }),
+    body: JSON.stringify({ email: emails[userId], password }),
   });
   expect(r.status).toBe(200);
   const cookie = r.headers.get("set-cookie")!.split(";")[0];
@@ -14,19 +21,27 @@ async function login(userId: string) {
   return { cookie, ...data };
 }
 describe("deployed boundaries", () => {
+  it("rejects a wrong password", async () => {
+    const r = await fetch(base + "/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: base },
+      body: JSON.stringify({ email: emails.s1, password: "wrong-password" }),
+    });
+    expect(r.status).toBe(401);
+  });
   it("denies unauthenticated reads", async () => {
     expect((await fetch(base + "/api/workspace")).status).toBe(401);
   });
   it("denies cross-origin login", async () => {
     expect(
       (
-        await fetch(base + "/api/demo/login", {
+        await fetch(base + "/api/auth/login", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Origin: "https://attacker.example",
           },
-          body: JSON.stringify({ userId: "p1" }),
+          body: JSON.stringify({ email: emails.p1, password }),
         })
       ).status,
     ).toBe(400);

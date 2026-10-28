@@ -9,8 +9,7 @@ export async function GET() {
     const a = await session();
     const s = await readState(a.namespace);
     const state = visible(s, a.userId);
-    if (a.namespace !== "demo")
-      state.integration = await integrationStatus(a.namespace);
+    state.integration = await integrationStatus(a.namespace);
     return NextResponse.json(
       {
         state,
@@ -21,10 +20,7 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch {
-    return NextResponse.json(
-      { error: "Please choose a demo profile" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Please sign in" }, { status: 401 });
   }
 }
 export async function POST(req: Request) {
@@ -48,8 +44,6 @@ export async function POST(req: Request) {
       visible(current, a.userId);
       if (current.users.find((u) => u.id === a.userId)?.role !== "instructor")
         throw Error("Instructor access required");
-      if (a.namespace === "demo")
-        throw Error("Demo profiles do not use Canvas roster sync");
       await requestRosterSync(a.namespace);
       const state = visible(await readState(a.namespace), a.userId);
       state.integration = await integrationStatus(a.namespace);
@@ -57,8 +51,7 @@ export async function POST(req: Request) {
     }
     const s = await mutate(a.userId, c, a.namespace);
     const state = visible(s, a.userId);
-    if (a.namespace !== "demo")
-      state.integration = await integrationStatus(a.namespace);
+    state.integration = await integrationStatus(a.namespace);
     return NextResponse.json({ state });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Could not save";

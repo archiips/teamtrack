@@ -55,22 +55,6 @@ import type { State, Task, User, Command } from "@/lib/types";
 import { attention } from "@/lib/domain";
 type View = "overview" | "tasks" | "team" | "agreement" | "activity";
 const labels = { todo: "To do", in_progress: "In progress", done: "Done" };
-const demoUsers = [
-  { id: "p1", name: "Dr. Morgan Lee", role: "Professor", initials: "ML" },
-  { id: "s1", name: "Alex Chen", role: "Student · Wayfinders", initials: "AC" },
-  {
-    id: "s2",
-    name: "Jordan Miller",
-    role: "Student · Wayfinders",
-    initials: "JM",
-  },
-  {
-    id: "s5",
-    name: "Sam Rivera",
-    role: "Student · Open Campus",
-    initials: "SR",
-  },
-];
 function date(s: string) {
   return new Date(s + "T12:00:00").toLocaleDateString("en-US", {
     month: "short",
@@ -154,16 +138,25 @@ export default function Page() {
       return () => clearTimeout(t);
     }
   }, [toast]);
-  async function login(id: string) {
+  async function login(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
     setBusy(true);
     setError("");
     try {
-      const r = await fetch("/api/demo/login", {
+      const r = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: id }),
+        body: JSON.stringify({
+          email: form.get("email"),
+          password: form.get("password"),
+        }),
       });
-      if (!r.ok) throw Error("Could not open demo. Please retry.");
+      if (!r.ok)
+        throw Error(
+          (await r.json().catch(() => ({}))).error ||
+            "Could not sign in. Please retry.",
+        );
       await refresh();
       setView("overview");
       setSelected(null);
@@ -247,24 +240,37 @@ export default function Page() {
             <span />
             Interactive class demo
           </div>
-          <h2>Find your place.</h2>
+          <h2>Welcome back.</h2>
           <p>
-            Choose a synthetic profile to explore TeamTrack.
+            Sign in with your class account.
             <br />
-            Your changes are saved and shared across sessions.
+            Changes are saved and shared with your team.
           </p>
-          <div className="profiles">
-            {demoUsers.map((u) => (
-              <button disabled={busy} key={u.id} onClick={() => login(u.id)}>
-                <span className="avatar blue">{u.initials}</span>
-                <span>
-                  <strong>{u.name}</strong>
-                  <small>{u.role}</small>
-                </span>
-                <ArrowRight size={19} />
-              </button>
-            ))}
-          </div>
+          <form className="signin" onSubmit={login}>
+            <label>
+              Email
+              <input
+                name="email"
+                type="email"
+                autoComplete="username"
+                placeholder="you@teamtrack.test"
+                required
+              />
+            </label>
+            <label>
+              Password
+              <input
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <button className="primary" disabled={busy}>
+              {busy ? "Signing in…" : "Sign in"}
+              <ArrowRight size={18} />
+            </button>
+          </form>
           {error && (
             <p className="error" role="alert">
               {error}
@@ -272,16 +278,16 @@ export default function Page() {
           )}
           <a
             className="canvas-note"
-            href="https://duct-groggy-kitten.ngrok-free.dev/courses/1"
+            href="/lms"
             target="_blank"
             rel="noreferrer"
           >
             <GraduationCap size={22} />
             <p>
-              <strong>Open the Canvas sandbox</strong>
+              <strong>Open the class course page</strong>
               <br />
-              See TeamTrack launched from a real Canvas course. Available while
-              the class demo sandbox is running.
+              See TeamTrack launched from a course in the demo LMS, the same way
+              it opens inside Canvas.
             </p>
             <ArrowUpRight size={18} />
           </a>
@@ -561,9 +567,10 @@ export default function Page() {
               <small>{prof ? "Instructor" : "Student"}</small>
             </div>
             <button
-              title="Switch demo profile"
-              aria-label="Switch demo profile"
+              title="Sign out"
+              aria-label="Sign out"
               onClick={() => {
+                void fetch("/api/auth/logout", { method: "POST" });
                 setS(null);
                 setError("");
               }}
@@ -584,7 +591,7 @@ export default function Page() {
           <div className="top-actions">
             <span className="demo-badge">
               <span />
-              {namespace === "demo" ? "Synthetic demo" : "Canvas connected"}
+              {s.integration ? "LMS connected" : "Class demo"}
             </span>
             <button
               className="icon-button"
@@ -695,7 +702,7 @@ export default function Page() {
               </button>
             </div>
           )}
-          {prof && namespace !== "demo" && (
+          {prof && s.integration && (
             <div className="roster-status">
               <span>
                 {s.integration?.error ||
@@ -707,11 +714,11 @@ export default function Page() {
                 className="secondary"
                 disabled={busy}
                 onClick={() =>
-                  command({ type: "roster.sync" }, "Canvas roster synchronized")
+                  command({ type: "roster.sync" }, "Course roster synchronized")
                 }
               >
                 <RefreshCw size={14} />
-                Sync Canvas roster
+                Sync course roster
               </button>
             </div>
           )}

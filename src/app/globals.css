@@ -2231,45 +2231,20 @@ textarea::placeholder {
   color: var(--c149);
   line-height: 1.9;
 }
-.profiles {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
+.signin {
   margin: 30px 0;
+  max-width: 420px;
 }
-.profiles button {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: var(--c5);
-  border: 1px solid var(--c150);
-  border-radius: 9px;
-  text-align: left;
-  padding: 17px;
-  transition:
-    border-color 0.2s,
-    transform 0.2s;
+.signin input {
+  padding: 13px 14px;
+  font-size: 13px;
+  border-radius: 10px;
 }
-.profiles button:hover {
-  border-color: var(--c151);
-  transform: translateX(3px);
-}
-.profiles button > span:nth-child(2) {
-  flex: 1;
-}
-.profiles strong {
-  font-size: 12px;
-  font-weight: 650;
-  display: block;
-}
-.profiles small {
-  display: block;
-  color: var(--c70);
-  font-size: 10px;
-  margin-top: 5px;
-}
-.profiles svg {
-  color: var(--c152);
+.signin .primary {
+  width: 100%;
+  justify-content: center;
+  margin-top: 6px;
+  padding: 13px;
 }
 .canvas-note {
   border-top: 1px solid var(--c6);

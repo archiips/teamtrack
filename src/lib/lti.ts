@@ -18,11 +18,36 @@ export type Registration = {
   tokenUrl: string;
   jwksUrl: string;
   origin: string;
+  /** The demo LMS bundled with this app: its users are the demo workspace's own users. */
+  builtin?: boolean;
 };
-export function registration(): Registration {
-  if (!process.env.LTI_REGISTRATION)
-    throw Error("Canvas integration is not configured");
-  return JSON.parse(process.env.LTI_REGISTRATION);
+export const DEMO_LMS = {
+  clientId: "teamtrack-demo",
+  deploymentId: "css474-demo",
+  courseId: "css474-fall-2026",
+};
+export function registrations(): Registration[] {
+  const list: Registration[] = [];
+  if (process.env.LTI_REGISTRATION)
+    list.push(JSON.parse(process.env.LTI_REGISTRATION));
+  const app = process.env.APP_URL;
+  if (app && process.env.LMS_PRIVATE_JWK && process.env.DEMO_MODE !== "false")
+    list.push({
+      issuer: app + "/lms",
+      clientId: DEMO_LMS.clientId,
+      deploymentId: DEMO_LMS.deploymentId,
+      authUrl: app + "/lms/api/authorize",
+      tokenUrl: app + "/lms/api/token",
+      jwksUrl: app + "/lms/api/jwks",
+      origin: new URL(app).origin,
+      builtin: true,
+    });
+  return list;
+}
+function registration(issuer: string): Registration {
+  const r = registrations().find((x) => x.issuer === issuer);
+  if (!r) throw Error("Unregistered Canvas platform");
+  return r;
 }
 export function validateClaims(
   p: JWTPayload,
@@ -58,14 +83,15 @@ export async function beginLaunch(
   loginHint: string,
   messageHint: string | undefined,
 ) {
-  const r = registration();
+  const r = registration(issuer);
   assertRegistration(r, issuer, clientId);
   if (!sql) throw Error("Database required");
   await init();
   await sql`CREATE TABLE IF NOT EXISTS teamtrack_launch (state text PRIMARY KEY, nonce text NOT NULL, expires_at timestamptz NOT NULL)`;
+  await sql`ALTER TABLE teamtrack_launch ADD COLUMN IF NOT EXISTS issuer text`;
   const state = randomUUID(),
     nonce = randomUUID();
-  await sql`INSERT INTO teamtrack_launch VALUES (${state},${nonce},now()+interval '5 minutes')`;
+  await sql`INSERT INTO teamtrack_launch (state,nonce,expires_at,issuer) VALUES (${state},${nonce},now()+interval '5 minutes',${r.issuer})`;
   const url = new URL(r.authUrl);
   url.search = new URLSearchParams({
     scope: "openid",
@@ -85,11 +111,11 @@ function id(v: string) {
   return createHash("sha256").update(v).digest("hex").slice(0, 32);
 }
 export async function finishLaunch(state: string, token: string) {
-  const r = registration();
   if (!sql) throw Error("Database required");
   const rows =
-    await sql`DELETE FROM teamtrack_launch WHERE state=${state} AND expires_at>now() RETURNING nonce`;
+    await sql`DELETE FROM teamtrack_launch WHERE state=${state} AND expires_at>now() RETURNING nonce,issuer`;
   if (rows.length !== 1) throw Error("Launch expired or already used");
+  const r = registration(rows[0].issuer);
   const { payload } = await jwtVerify(
     token,
     createRemoteJWKSet(new URL(r.jwksUrl)),
@@ -108,6 +134,7 @@ export async function finishLaunch(state: string, token: string) {
   )
     throw Error("Invalid authorized party");
   const v = validateClaims(payload, rows[0].nonce, r.deploymentId);
+  if (r.builtin) return finishDemoLaunch(v, payload);
   const namespace =
     "canvas-" + id(r.issuer + r.clientId + r.deploymentId + v.courseId);
   const userId = id(r.issuer + r.clientId + v.subject);
@@ -149,26 +176,51 @@ export async function finishLaunch(state: string, token: string) {
     else s.users.push(user);
     await tx`UPDATE teamtrack_state SET data=${tx.json(s)} WHERE id=${namespace}`;
   });
+  await connectRoster(namespace, v.role, payload);
+  return { namespace, userId };
+}
+/** The demo LMS course is the demo workspace; its user ids are the workspace's own. */
+async function finishDemoLaunch(
+  v: ReturnType<typeof validateClaims>,
+  payload: JWTPayload,
+) {
+  if (!sql) throw Error("Database required");
+  if (v.courseId !== DEMO_LMS.courseId) throw Error("Unknown demo course");
+  await init();
+  const s = (await sql`SELECT data FROM teamtrack_state WHERE id='demo'`)[0]
+    ?.data as State | undefined;
+  const user = s?.users.find((u) => u.id === v.subject);
+  if (!user || user.role !== v.role) throw Error("Unknown demo participant");
+  await connectRoster("demo", v.role, payload);
+  return { namespace: "demo", userId: user.id };
+}
+async function connectRoster(
+  namespace: string,
+  role: "instructor" | "student",
+  payload: JWTPayload,
+) {
+  if (!sql) throw Error("Database required");
   const nrps = payload[
     "https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice"
   ] as { context_memberships_url?: string } | undefined;
   await courseMetadataTable();
-  if (v.role === "instructor") {
+  if (role === "instructor") {
     await sql`INSERT INTO teamtrack_course (namespace,membership_url,error) VALUES (${namespace},${nrps?.context_memberships_url || null},${nrps?.context_memberships_url ? null : "Canvas has not granted roster permission. Enable readonly Names and Roles access."}) ON CONFLICT(namespace) DO UPDATE SET membership_url=EXCLUDED.membership_url`;
     if (nrps?.context_memberships_url)
       await requestRosterSync(namespace).catch(() => {});
   }
-  return { namespace, userId };
 }
 export async function syncCanvasRoster(
   namespace: string,
   membershipUrl: string,
 ) {
-  const r = registration();
   if (!sql || !process.env.LTI_PRIVATE_JWK)
     throw Error("Roster service not configured");
   const url = new URL(membershipUrl);
-  if (url.origin !== r.origin) throw Error("Unregistered roster host");
+  const r = registrations().find(
+    (x) => x.origin === url.origin && (namespace === "demo") === !!x.builtin,
+  );
+  if (!r) throw Error("Unregistered roster host");
   const jwk = JSON.parse(process.env.LTI_PRIVATE_JWK);
   const key = await importJWK(jwk, "RS256");
   const assertion = await new SignJWT({})
@@ -226,7 +278,9 @@ export async function syncCanvasRoster(
       if (!role) continue;
       const name = typeof m.name === "string" ? m.name : "Canvas participant";
       members.push({
-        id: id(r.issuer + r.clientId + String(m.user_id)),
+        id: r.builtin
+          ? String(m.user_id)
+          : id(r.issuer + r.clientId + String(m.user_id)),
         name,
         role,
         initials: name
@@ -246,7 +300,15 @@ export async function syncCanvasRoster(
       await tx`SELECT data FROM teamtrack_state WHERE id=${namespace} FOR UPDATE`;
     const s = rows[0].data as State;
     const users = new Map(s.users.map((u) => [u.id, { ...u, active: false }]));
-    for (const u of members) users.set(u.id, { ...u, active: true });
+    // Keep what TeamTrack already knows (colour, email); take name and role from the roster.
+    for (const u of members)
+      users.set(u.id, {
+        ...u,
+        ...users.get(u.id),
+        name: u.name,
+        role: u.role,
+        active: true,
+      });
     s.users = [...users.values()];
     await tx`UPDATE teamtrack_state SET data=${tx.json(s)} WHERE id=${namespace}`;
   });
@@ -258,10 +320,13 @@ async function courseMetadataTable() {
   await sql`CREATE TABLE IF NOT EXISTS teamtrack_course (namespace text PRIMARY KEY, membership_url text, last_sync timestamptz, error text, syncing boolean NOT NULL DEFAULT false, started_at timestamptz)`;
 }
 export async function integrationStatus(namespace: string) {
+  if (!sql) return undefined;
   await courseMetadataTable();
   if (!sql) throw Error("Database required");
   const rows =
     await sql`SELECT last_sync,error FROM teamtrack_course WHERE namespace=${namespace}`;
+  // The demo workspace only shows an integration once the demo LMS has launched it.
+  if (!rows[0] && namespace === "demo") return undefined;
   return {
     lastSync: rows[0]?.last_sync
       ? new Date(rows[0].last_sync).toISOString()
@@ -272,6 +337,12 @@ export async function integrationStatus(namespace: string) {
 export async function requestRosterSync(namespace: string) {
   await courseMetadataTable();
   if (!sql) throw Error("Database required");
+  const known =
+    await sql`SELECT 1 FROM teamtrack_course WHERE namespace=${namespace}`;
+  if (!known.length)
+    throw Error(
+      "Launch TeamTrack from the course page once to connect the roster.",
+    );
   const rows =
     await sql`UPDATE teamtrack_course SET syncing=true,started_at=now() WHERE namespace=${namespace} AND (syncing=false OR started_at<now()-interval '5 minutes') RETURNING membership_url`;
   if (!rows.length)
