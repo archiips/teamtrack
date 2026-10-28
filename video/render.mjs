@@ -1,6 +1,6 @@
 // Renders stage.html frame by frame. Usage:
 //   node video/render.mjs --stills 1,5.5,12   -> work/stills/*.png
-//   node video/render.mjs [--cut short]        -> work/video-noaudio[-short].mp4
+//   node video/render.mjs [--cut short|v2]     -> work/video-noaudio[-short|-v2].mp4
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
@@ -10,10 +10,17 @@ const DIR = fileURLToPath(new URL(".", import.meta.url));
 const cutArg = process.argv.indexOf("--cut");
 const CUT = cutArg > 0 ? process.argv[cutArg + 1] : "long";
 const FPS = 30,
-  DURATION = { long: 60, short: 19 }[CUT];
+  DURATION = { long: 60, short: 19, v2: 20 }[CUT];
 const SUFFIX = CUT === "long" ? "" : "-" + CUT;
 const stillsArg = process.argv.indexOf("--stills");
-const rects = JSON.parse(readFileSync(DIR + "work/shots/rects.json", "utf8"));
+// v2 is the violet-design pitch video with its own stage and captures.
+const V2 = CUT === "v2";
+const rects = JSON.parse(
+  readFileSync(
+    DIR + (V2 ? "work/v2/shots/rects.json" : "work/shots/rects.json"),
+    "utf8",
+  ),
+);
 
 const browser = await chromium.launch({
   channel: "chrome",
@@ -26,7 +33,7 @@ await page.addInitScript(
 );
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
-await page.goto(pathToFileURL(DIR + "stage.html").href);
+await page.goto(pathToFileURL(DIR + (V2 ? "stage2.html" : "stage.html")).href);
 await page.evaluate(() => window.ready);
 const frame = async (t) => {
   await page.evaluate((t) => {

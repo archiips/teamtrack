@@ -1,10 +1,12 @@
 #!/bin/sh
 # Muxes video + soundtrack, normalizes loudness, bakes the poster in as frame 0.
-# Usage: sh video/deliver.sh [long|short]
+# Usage: sh video/deliver.sh [long|short|v2]
 set -e
 cd "$(dirname "$0")"
 CUT=${1:-long}
-if [ "$CUT" = long ]; then SUF=""; POSTER_T=14.0; else SUF="-$CUT"; POSTER_T=5.8; fi
+if [ "$CUT" = long ]; then SUF=""; POSTER_T=14.0
+elif [ "$CUT" = v2 ]; then SUF="-v2"; POSTER_T=16.0
+else SUF="-$CUT"; POSTER_T=5.8; fi
 mkdir -p out
 node render.mjs --cut "$CUT" --stills "$POSTER_T"
 cp "work/stills/$CUT-t$(printf '%.2f' "$POSTER_T").png" "work/poster$SUF.png"

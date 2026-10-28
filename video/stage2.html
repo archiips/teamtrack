@@ -1,0 +1,323 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TeamTrack demo stage (violet)</title>
+    <style>
+      @font-face {
+        font-family: Fredoka;
+        src: url(work/fonts/fredoka.woff2) format("woff2");
+        font-weight: 300 700;
+      }
+      @font-face {
+        font-family: "Instrument Serif";
+        src: url(work/fonts/instrument-italic.woff2) format("woff2");
+        font-style: italic;
+      }
+      @font-face {
+        font-family: "Instrument Serif";
+        src: url(work/fonts/instrument.woff2) format("woff2");
+      }
+      @font-face {
+        font-family: Manrope;
+        src: url(work/fonts/manrope.woff2) format("woff2");
+        font-weight: 400 800;
+      }
+      :root {
+        --ink: #1f1247;
+        --navy: #35206f;
+        --blue: #5e17eb;
+        --cream: #fbf6f1;
+        --lift: #8c52ff;
+        --pink: #cb6ce6;
+        --lilac: #edbcfa;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ink);
+      }
+      #stage {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        font-family: Manrope, sans-serif;
+        background:
+          radial-gradient(ellipse 45% 55% at 82% 8%, #8c52ff55, transparent 70%),
+          radial-gradient(ellipse 40% 50% at 6% 100%, #cb6ce633, transparent 70%),
+          linear-gradient(160deg, #35206f, #1f1247);
+      }
+      #grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(#ffffff0a 1px, transparent 1px),
+          linear-gradient(90deg, #ffffff0a 1px, transparent 1px);
+        background-size: 54px 54px;
+        mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 80%);
+      }
+      .doodle {
+        position: absolute;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      /* Kinetic type */
+      .kt {
+        position: absolute;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: Fredoka, sans-serif;
+        font-weight: 600;
+        color: #fff;
+        letter-spacing: -1px;
+        white-space: nowrap;
+      }
+      .accent {
+        font-family: "Instrument Serif", serif;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--lilac);
+        position: relative;
+        letter-spacing: 0;
+        padding: 0 0.06em;
+      }
+      .accent::after {
+        content: "";
+        position: absolute;
+        left: -0.04em;
+        right: -0.04em;
+        bottom: 0.1em;
+        height: 0.26em;
+        background: var(--lift);
+        border-radius: 0.2em 0.5em 0.3em 0.6em;
+        transform-origin: left;
+        transform: rotate(-1.5deg) scaleX(var(--hl, 1));
+        z-index: -1;
+      }
+      /* Product window */
+      #card {
+        position: absolute;
+        left: 288px;
+        top: 40px;
+        width: 1344px;
+        border-radius: 18px;
+        background: #fbf6f1;
+        border: 3px solid var(--ink);
+        box-shadow:
+          10px 10px 0 var(--lift),
+          0 40px 90px #00000066;
+        overflow: hidden;
+        transform-origin: 50% 60%;
+      }
+      #chrome {
+        height: 44px;
+        background: #f3ecf8;
+        border-bottom: 2px solid #e4d8f0;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 18px;
+      }
+      #chrome i {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #d9c9ea;
+      }
+      #url {
+        margin-left: 18px;
+        flex: 0 1 560px;
+        height: 26px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid #e4d8f0;
+        font: 600 13px Manrope, sans-serif;
+        color: #5f687e;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+      }
+      #view {
+        position: relative;
+        width: 1344px;
+        height: 840px;
+        overflow: hidden;
+        background: #fff;
+      }
+      #view img.screen {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform-origin: 0 0;
+      }
+      #pip {
+        position: absolute;
+        overflow: hidden;
+        transform-origin: 0 0;
+      }
+      #pip img {
+        display: block;
+        width: 358px;
+        height: 200px;
+      }
+      #dip {
+        position: absolute;
+        inset: 0;
+        background: #fbf6f1;
+        pointer-events: none;
+      }
+      .ring {
+        position: absolute;
+        border: 4px solid #cb6ce6;
+        border-radius: 16px;
+        box-shadow:
+          0 0 0 6px #cb6ce633,
+          0 0 40px #cb6ce699;
+        pointer-events: none;
+      }
+      #cursor {
+        position: absolute;
+        width: 34px;
+        height: 34px;
+        transform-origin: 6px 4px;
+        filter: drop-shadow(2px 3px 2px #1f124766);
+      }
+      #ripple {
+        position: absolute;
+        border-radius: 50%;
+        border: 3px solid #cb6ce6;
+      }
+      /* Caption sticker */
+      #cap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 944px;
+        display: flex;
+        justify-content: center;
+      }
+      #cap span {
+        font-family: Fredoka, sans-serif;
+        font-weight: 600;
+        font-size: 38px;
+        color: var(--ink);
+        background: var(--cream);
+        border: 3px solid var(--ink);
+        box-shadow: 6px 6px 0 var(--lift);
+        border-radius: 18px;
+        padding: 14px 30px 16px;
+        white-space: nowrap;
+      }
+      #logo-wrap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 300px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      #logo-tile {
+        width: 168px;
+        height: 168px;
+        background: var(--cream);
+        border: 4px solid var(--ink);
+        border-radius: 40px;
+        box-shadow: 10px 10px 0 var(--lift);
+        padding: 22px;
+      }
+      #logo-name {
+        margin-top: 44px;
+        font: 600 104px Fredoka, sans-serif;
+        color: #fff;
+        letter-spacing: -2px;
+      }
+      #logo-tag {
+        margin-top: 8px;
+        font: 600 36px Manrope, sans-serif;
+        color: #e3d4f5;
+      }
+      #logo-url {
+        margin-top: 34px;
+        font: 700 26px Manrope, sans-serif;
+        color: var(--ink);
+        background: var(--cream);
+        border: 3px solid var(--ink);
+        box-shadow: 5px 5px 0 var(--lift);
+        border-radius: 999px;
+        padding: 10px 26px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="grid"></div>
+      <svg class="doodle" id="d-squig" viewBox="0 0 120 30" style="width: 170px; stroke: #edbcfa; stroke-width: 4">
+        <path d="M4 18c10-14 20-14 28 0s18 14 28 0 18-14 28 0 18 14 28 0" />
+      </svg>
+      <svg class="doodle" id="d-star" viewBox="0 0 40 40" style="width: 46px; fill: #fbf6f1; stroke: none">
+        <path d="M20 2c2 11 7 16 18 18-11 2-16 7-18 18-2-11-7-16-18-18 11-2 16-7 18-18z" />
+      </svg>
+      <svg class="doodle" id="d-star2" viewBox="0 0 40 40" style="width: 24px; fill: #cb6ce6; stroke: none">
+        <path d="M20 2c2 11 7 16 18 18-11 2-16 7-18 18-2-11-7-16-18-18 11-2 16-7 18-18z" />
+      </svg>
+      <svg class="doodle" id="d-loop" viewBox="0 0 90 50" style="width: 130px; stroke: #8c52ff; stroke-width: 3">
+        <path d="M4 40c18 4 30-6 28-18S14 8 16 20s22 22 40 14 24-20 30-28" />
+      </svg>
+      <svg class="doodle" id="d-birds" viewBox="0 0 70 30" style="width: 96px; stroke: #edbcfacc; stroke-width: 2">
+        <path d="M4 16c5-5 9-5 12 0 3-6 8-7 13-2" />
+        <path d="M40 8c4-4 7-4 9 0 3-5 6-5 10-1" />
+      </svg>
+      <svg class="doodle" id="d-dots" viewBox="0 0 60 36" style="width: 100px; fill: #8c52ff; stroke: none">
+        <g id="dots"></g>
+      </svg>
+
+      <div class="kt" id="k1" style="font-size: 120px">Group project.</div>
+      <div class="kt" id="k2" style="font-size: 132px">What’s <span class="accent" id="k2a">mine</span>?</div>
+      <div class="kt" id="k3" style="font-size: 88px">Supports faculty judgment.</div>
+      <div class="kt" id="k4" style="font-size: 104px"><span class="accent" id="k4a">Never</span> auto-grades.</div>
+
+      <div id="card">
+        <div id="chrome"><i></i><i></i><i></i><div id="url"></div></div>
+        <div id="view">
+          <img class="screen" id="scrA" />
+          <img class="screen" id="scrB" />
+          <div id="pip"><img id="pipimg" /></div>
+          <div class="ring" id="ring"></div>
+          <div id="ripple"></div>
+          <svg id="cursor" viewBox="0 0 24 24">
+            <path d="M4 2 L4 19 L8.6 14.8 L11.6 21.4 L14.6 20 L11.7 13.6 L18 13.4 Z" fill="#fff" stroke="#1f1247" stroke-width="1.6" stroke-linejoin="round" />
+          </svg>
+          <div id="dip"></div>
+        </div>
+      </div>
+
+      <div id="cap"><span id="captext"></span></div>
+
+      <div id="logo-wrap">
+        <div id="logo-tile">
+          <svg viewBox="0 0 100 100" width="118" height="118">
+            <defs>
+              <clipPath id="lc"><polygon points="0,0 99.2,0 0,99.2" /></clipPath>
+            </defs>
+            <path d="M66 20.2H83.5Q91 20.2 91 27.7V35Q91 42.5 83.5 42.5H46.3Q38.8 42.5 38.8 50V79.8" fill="none" stroke="#5a4bd7" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M9 50V27.7Q9 20.2 16.5 20.2H95" fill="none" stroke="#728de0" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#lc)" />
+          </svg>
+        </div>
+        <div id="logo-name">TeamTrack</div>
+        <div id="logo-tag">Built for Canvas. Designed around people.</div>
+        <div id="logo-url">teamtrack-kappa.vercel.app</div>
+      </div>
+    </div>
+    <script src="stage2.js"></script>
+  </body>
+</html>

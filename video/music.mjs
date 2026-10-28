@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const CUT = process.env.CUT || "long";
 const SR = 44100,
-  DUR = { long: 60, short: 19 }[CUT],
+  DUR = { long: 60, short: 19, v2: 20 }[CUT],
   N = SR * DUR,
   BEAT = 60 / 96,
   BAR = BEAT * 4;
@@ -196,6 +196,13 @@ const CUES = {
     click: [3.6, 9.88, 12.1],
     chime: [12.25, 16.1],
     typing: [9.92, 11.85],
+  },
+  v2: {
+    soft: [0.15, 1.25],
+    whoosh: [2.15, 7.75, 12.75, 17.5],
+    click: [4.05, 6.75, 7.6, 12.65],
+    chime: [17.85],
+    typing: [0, 0],
   },
 }[CUT];
 CUES.soft.forEach((t) => whoosh(t, 0.06, 0.5));
