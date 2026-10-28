@@ -70,12 +70,20 @@ export default async function Course({
             ))}
           </nav>
           {tab === "teamtrack" ? (
-            <iframe
-              className="lms-tool"
-              src="/lms/api/launch"
-              title="TeamTrack"
-              allow="clipboard-write"
-            />
+            <div className="lms-tool-wrap">
+              <div className="lms-tool-bar">
+                <span>TeamTrack · opened from this course</span>
+                <a href="/lms/api/launch" target="_blank" rel="noopener">
+                  Open in new tab ↗
+                </a>
+              </div>
+              <iframe
+                className="lms-tool"
+                src="/lms/api/launch"
+                title="TeamTrack"
+                allow="clipboard-write"
+              />
+            </div>
           ) : tab === "people" ? (
             <section className="lms-content">
               <h1>People</h1>
