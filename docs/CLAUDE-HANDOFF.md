@@ -40,6 +40,7 @@ Stack: Next.js 16.4 / React 19.3 / TypeScript, postgres.js, jose (LTI 1.3), thre
 - `.welcome` is an existing class; don't reuse it for other components (doodles collided once).
 - Never type Canvas passwords into scripts; Canvas frames come from the user's logged-in Chrome. Demo accounts sign in with the shared DEMO_PASSWORD (never commit it). Local `.env.local` points at the production Neon DB: local runs write to the live demo.
 - Video captures write demo data: always `npm run demo:reset` before and after `video/capture.mjs`.
+- Integration tests (`tests/api.test.ts`, run with `--env-file=.env.local`) add "Automated integration check" updates and their "Added evidence" events to the live demo (local and production share the DB). Afterwards run `node --env-file=.env.local --import tsx scripts/clean-test-records.ts`, which removes both.
 
 ## Open / optional next steps
 
