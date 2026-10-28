@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const CUT = process.env.CUT || "long";
 const SR = 44100,
-  DUR = { long: 60, short: 19, v2: 20 }[CUT],
+  DUR = { long: 60, short: 19, v2: 20, v3: 14.5 }[CUT],
   N = SR * DUR,
   BEAT = 60 / 96,
   BAR = BEAT * 4;
@@ -31,7 +31,9 @@ const BASS = [38, 47, 43, 45];
 // Short cut: hook on pads (bar 0), groove bars 1-5, outro bars 6-7.
 const BARS = CUT === "long" ? 24 : 8;
 const groove = (bar) =>
-  CUT === "long" ? (bar >= 2 && bar <= 19) || bar >= 22 : bar >= 1;
+  CUT === "long"
+    ? (bar >= 2 && bar <= 19) || bar >= 22
+    : CUT === "v3" || bar >= 1;
 const breakdown = (bar) => CUT === "long" && bar >= 20 && bar <= 21;
 
 for (let bar = 0; bar < BARS; bar++) {
@@ -196,6 +198,13 @@ const CUES = {
     click: [3.6, 9.88, 12.1],
     chime: [12.25, 16.1],
     typing: [9.92, 11.85],
+  },
+  v3: {
+    soft: [0.05],
+    whoosh: [0.7, 4.15, 7.0, 10.0, 12.45],
+    click: [1.75, 3.62, 4.08, 6.9],
+    chime: [12.7],
+    typing: [0, 0],
   },
   v2: {
     soft: [0.15, 1.25],

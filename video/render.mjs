@@ -10,11 +10,11 @@ const DIR = fileURLToPath(new URL(".", import.meta.url));
 const cutArg = process.argv.indexOf("--cut");
 const CUT = cutArg > 0 ? process.argv[cutArg + 1] : "long";
 const FPS = 30,
-  DURATION = { long: 60, short: 19, v2: 20 }[CUT];
+  DURATION = { long: 60, short: 19, v2: 20, v3: 14.5 }[CUT];
 const SUFFIX = CUT === "long" ? "" : "-" + CUT;
 const stillsArg = process.argv.indexOf("--stills");
 // v2 is the violet-design pitch video with its own stage and captures.
-const V2 = CUT === "v2";
+const V2 = CUT === "v2" || CUT === "v3";
 const rects = JSON.parse(
   readFileSync(
     DIR + (V2 ? "work/v2/shots/rects.json" : "work/shots/rects.json"),

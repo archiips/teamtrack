@@ -2,6 +2,18 @@
 
 Two cuts, 1920×1080 / 30fps: a 19-second pitch cut (`teamtrack-demo-short.mp4`) and a 60-second walkthrough (`teamtrack-demo.mp4`). Both start in the Canvas sandbox and follow a professor and a student through the real product. Every product shot is a capture of the live app; motion, captions and cursor are added on top.
 
+## Fast pitch cut (14.5s, current design) — `teamtrack-demo-v3.mp4`
+
+Same student flow as v2, faster, with a 1-second "What's *mine*?" flash instead of the intro, plus a professor scene: the **Team progress** chart (all teams, bars captured growing in slow motion) — "Professors see every team at a glance." Poster frame is that chart.
+
+```
+node --env-file=.env.local video/capture-v2.mjs     # student screens (read-only)
+node --env-file=.env.local video/capture-prof.mjs   # professor chart frames (read-only)
+CUT=v3 node video/music.mjs
+node video/render.mjs --cut v3
+sh video/deliver.sh v3                              # -> video/out/teamtrack-demo-v3.mp4
+```
+
 ## Violet pitch cut (20s, current design) — `teamtrack-demo-v2.mp4`
 
 Matches the violet / liquid-glass design (light mode), from a student's (Alex's) point of view: hook "Group project." → "What's *mine*?" → Tasks, click **Assigned to me** ("Know exactly what's yours.") → **Board view**, camera on In progress with Jordan's blocked task ("See what teammates are working on.") → **My team**, the real contribution-bar animation captured in slow motion ("Everyone's contribution, side by side.") → logo, "Clear tasks. Fair teams."

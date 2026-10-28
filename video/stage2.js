@@ -30,7 +30,12 @@ const box = (r) => [r.x, r.y, r.width, r.height];
 const S = "work/v2/shots/";
 const pad = (n) => String(n).padStart(3, "0");
 const URL_TEXT = "teamtrack-kappa.vercel.app";
-const T = {
+const [mineX, mineY] = center(R.tabMine),
+  [allX, allY] = center(R.tabAll),
+  [boardX, boardY] = center(R.boardButton),
+  [teamX, teamY] = center(R.navTeam);
+
+const T_V2 = {
   k1: [0.15, 1.35],
   k2: [1.25, 2.5],
   k2hl: [1.75, 2.15],
@@ -40,12 +45,7 @@ const T = {
   teamStart: 12.75,
   tag: "Clear tasks. Fair teams.",
 };
-const [mineX, mineY] = center(R.tabMine),
-  [allX, allY] = center(R.tabAll),
-  [boardX, boardY] = center(R.boardButton),
-  [teamX, teamY] = center(R.navTeam);
-
-const SHOTS = [
+const SHOTS_V2 = [
   {
     a: 2.2,
     b: 4.3,
@@ -127,15 +127,124 @@ const SHOTS = [
     ring: { box: box(R.breakdown), a: 15.2, b: 17.3 },
   },
 ];
-const CAPS = [
+const CAPS_V2 = [
   [2.7, 6.9, "Know exactly what’s yours."],
   [7.4, 12.3, "See what teammates are working on."],
   [13.1, 17.2, "Everyone’s contribution, side by side."],
 ];
 
+const T_V3 = {
+  k1: null,
+  k2: [0.05, 1.0],
+  k2hl: [0.3, 0.6],
+  cardIn: 0.7,
+  cardOut: 12.4,
+  outro: 12.55,
+  outroStep: [0.2, 0.4, 0.6],
+  tag: "Clear tasks. Fair teams.",
+};
+const [chartX, chartY] = center(R.progressChart);
+const SHOTS_V3 = [
+  {
+    a: 0.7,
+    b: 1.9,
+    src: S + "tasks-all.jpg",
+    cam: [[0.7, 240, 150, 1.2]],
+    cur: [
+      [1.0, 1100, 700],
+      [1.6, mineX, mineY],
+    ],
+    clicks: [1.75],
+    ring: { box: box(R.tabMine), a: 1.55, b: 1.9 },
+  },
+  {
+    a: 1.9,
+    b: 3.7,
+    cut: true,
+    src: S + "tasks-mine.jpg",
+    cam: [[1.9, 240, 150, 1.2]],
+    cur: [
+      [1.9, mineX, mineY],
+      [2.35, 760, 640],
+      [3.15, 760, 640],
+      [3.55, allX, allY],
+    ],
+    clicks: [3.62],
+    ring: { box: box(R.myOpenTask), a: 2.1, b: 3.55 },
+  },
+  {
+    a: 3.7,
+    b: 4.15,
+    cut: true,
+    src: S + "tasks-all.jpg",
+    cam: [[3.7, 240, 150, 1.2]],
+    cur: [
+      [3.7, allX, allY],
+      [4.0, boardX, boardY],
+    ],
+    clicks: [4.08],
+  },
+  {
+    a: 4.15,
+    b: 7.0,
+    cut: true,
+    src: S + "board.jpg",
+    cam: [
+      [4.15, 240, 150, 1.2],
+      [4.85, 388, 338, 1.6],
+      [6.25, 388, 338, 1.6],
+      [6.7, 0, 0, 1],
+    ],
+    cur: [
+      [4.15, boardX, boardY],
+      [4.5, 1100, 760],
+      [6.35, 760, 560],
+      [6.8, teamX, teamY],
+    ],
+    clicks: [6.9],
+    ring: { box: box(R.jordanCard), a: 5.0, b: 6.3 },
+  },
+  {
+    a: 7.0,
+    b: 10.0,
+    cut: true,
+    frames: { dir: "team", start: 7.0 },
+    cam: [
+      [7.0, 0, 0, 1],
+      [7.4, 0, 0, 1],
+      [8.2, 0, 175, 1.25],
+    ],
+    cur: [
+      [7.0, teamX, teamY],
+      [7.3, 520, 820],
+    ],
+    curOff: 7.4,
+    ring: { box: box(R.breakdown), a: 8.5, b: 9.95 },
+  },
+  {
+    a: 10.0,
+    b: 12.45,
+    frames: { dir: "prof", start: 10.1, from: 0 },
+    cam: [
+      [10.0, Math.min(240, chartX - 600), Math.min(150, chartY - 375), 1.2],
+    ],
+  },
+];
+const CAPS_V3 = [
+  [0.95, 3.7, "Know exactly what\u2019s yours."],
+  [4.15, 6.9, "See what teammates are working on."],
+  [7.1, 9.95, "Everyone\u2019s contribution, side by side."],
+  [10.15, 12.35, "Professors see every team at a glance."],
+];
+const CUT = window.CUT === "v3" ? "v3" : "v2";
+const T = CUT === "v3" ? T_V3 : T_V2,
+  SHOTS = CUT === "v3" ? SHOTS_V3 : SHOTS_V2,
+  CAPS = CUT === "v3" ? CAPS_V3 : CAPS_V2;
 // ---------- preload ----------
 const urls = new Set(SHOTS.filter((s) => s.src).map((s) => s.src));
 for (let i = 1; i < R.teamFrames; i++) urls.add(`${S}team/${pad(i)}.jpg`);
+if (CUT === "v3")
+  for (let i = 0; i < R.profFrames; i++) urls.add(`${S}prof/${pad(i)}.jpg`);
 window.ready = Promise.all([
   document.fonts.ready,
   ...[...urls].map((u) => {
@@ -190,13 +299,22 @@ function doodles(t) {
   place("d-birds", 1440 + Math.sin(t * 0.5) * 30, 50 + Math.sin(t * 0.9) * 6);
   place("d-dots", 70, 520);
 }
+function frameSrc({ dir, start, from = 1 }, t) {
+  const count = dir === "prof" ? R.profFrames : R.teamFrames,
+    i = Math.min(
+      count - 1,
+      Math.max(from, from + Math.floor((t - start) * 30)),
+    );
+  return `${S}${dir}/${pad(i)}.jpg`;
+}
 const shotAt = (t) =>
   SHOTS.find((s) => t >= s.a && t < s.b) ||
   (t >= SHOTS[SHOTS.length - 1].b ? SHOTS[SHOTS.length - 1] : SHOTS[0]);
 
 window.render = function render(t) {
   doodles(t);
-  kinetic($("k1"), t, T.k1, 400);
+  if (T.k1) kinetic($("k1"), t, T.k1, 400);
+  else $("k1").style.opacity = 0;
   kinetic($("k2"), t, T.k2, 400);
   $("k2a").style.setProperty("--hl", out(seg(t, T.k2hl[0], T.k2hl[1])));
 
@@ -210,9 +328,7 @@ window.render = function render(t) {
     [cx, cy, cz] = kf(t, s.cam),
     k = (1344 / 1440) * cz,
     map = (x, y) => [(x - cx) * k, (y - cy) * k];
-  const src = s.team
-    ? `${S}team/${pad(Math.min(R.teamFrames - 1, Math.max(1, 1 + Math.floor((t - T.teamStart) * 30))))}.jpg`
-    : s.src;
+  const src = s.frames ? frameSrc(s.frames, t) : s.src;
   const img = $("scrA");
   if (img.getAttribute("src") !== src) img.setAttribute("src", src);
   img.style.width = "1440px";
@@ -220,7 +336,12 @@ window.render = function render(t) {
   img.style.transform = `translate(${-cx * k}px, ${-cy * k}px) scale(${k})`;
   $("scrB").style.display = "none";
   $("pip").style.display = "none";
-  $("dip").style.opacity = 0;
+  const i = SHOTS.indexOf(s),
+    next = SHOTS[i + 1];
+  let dip = 0;
+  if (!s.cut && i > 0) dip = Math.max(dip, 1 - seg(t, s.a, s.a + 0.2));
+  if (next && !next.cut) dip = Math.max(dip, seg(t, s.b - 0.2, s.b));
+  $("dip").style.opacity = dip;
 
   const ring = $("ring");
   if (s.ring) {
@@ -277,22 +398,18 @@ window.render = function render(t) {
 
   const O = T.outro,
     lp = seg(t, O, O + 0.7),
+    [s1, s2, s3] = T.outroStep || [0.35, 0.7, 1.05],
     ease = (a) => out(seg(t, O + a, O + a + 0.6));
   $("logo-wrap").style.opacity = t < O ? 0 : 1;
   $("logo-tile").style.transform =
     `scale(${back(lp)}) rotate(${-14 + 10 * out(lp)}deg)`;
-  setText(
-    $("logo-name"),
-    ease(0.35),
-    (1 - ease(0.35)) * 30,
-    (1 - ease(0.35)) * 10,
-  );
-  setText($("logo-tag"), ease(0.7), (1 - ease(0.7)) * 24, (1 - ease(0.7)) * 8);
+  setText($("logo-name"), ease(s1), (1 - ease(s1)) * 30, (1 - ease(s1)) * 10);
+  setText($("logo-tag"), ease(s2), (1 - ease(s2)) * 24, (1 - ease(s2)) * 8);
   setText(
     $("logo-url"),
-    ease(1.05),
-    (1 - ease(1.05)) * 20,
+    ease(s3),
+    (1 - ease(s3)) * 20,
     0,
-    0.9 + 0.1 * back(seg(t, O + 1.05, O + 1.65)),
+    0.9 + 0.1 * back(seg(t, O + s3, O + s3 + 0.6)),
   );
 };
