@@ -307,3 +307,43 @@ describe("team leader and agreement votes", () => {
     ).toBe("X");
   });
 });
+describe("GitHub links", () => {
+  const team = () => {
+    let s = fresh();
+    s = apply(s, "u_b", { type: "team.join", teamId: s.teams[0].id });
+    return s;
+  };
+  it("lets only the leader link and unlink the team's repo", () => {
+    let s = team();
+    const link = {
+      type: "team.github.link",
+      teamId: s.teams[0].id,
+      installationId: 7,
+      repo: "acme/food-app",
+    };
+    expect(() => apply(s, "u_b", link)).toThrow("team leader");
+    expect(() => apply(s, "u_a", { ...link, repo: "not a repo" })).toThrow(
+      "repository",
+    );
+    s = apply(s, "u_a", link);
+    expect(s.teams[0].github).toMatchObject({
+      installationId: 7,
+      repo: "acme/food-app",
+      by: "u_a",
+    });
+    expect(() =>
+      apply(s, "u_b", { type: "team.github.unlink", teamId: s.teams[0].id }),
+    ).toThrow("team leader");
+    s = apply(s, "u_a", { type: "team.github.unlink", teamId: s.teams[0].id });
+    expect(s.teams[0].github).toBeUndefined();
+  });
+  it("sets and clears a member's own GitHub username", () => {
+    let s = apply(team(), "u_b", { type: "profile.github", login: "@kai-lee" });
+    expect(s.users.find((u) => u.id === "u_b")?.github).toBe("kai-lee");
+    expect(() =>
+      apply(s, "u_b", { type: "profile.github", login: "bad name!" }),
+    ).toThrow("GitHub username");
+    s = apply(s, "u_b", { type: "profile.github", login: "" });
+    expect(s.users.find((u) => u.id === "u_b")?.github).toBeUndefined();
+  });
+});

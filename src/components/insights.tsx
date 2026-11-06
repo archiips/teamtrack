@@ -125,9 +125,12 @@ export function StatusLegend() {
 export function TeamProgressChart({
   rows,
   onOpen,
+  notes = {},
 }: {
   rows: { team: Team; health: Mix & { overdue: number } }[];
   onOpen: (teamId: string) => void;
+  /** Extra per-team flags, e.g. "No commits in 9d". */
+  notes?: Record<string, string>;
 }) {
   return (
     <section
@@ -156,6 +159,9 @@ export function TeamProgressChart({
             <span className="progress-flag">
               {h.overdue > 0 && (
                 <small className="attention-tag">{h.overdue} overdue</small>
+              )}
+              {notes[team.id] && (
+                <small className="attention-tag">{notes[team.id]}</small>
               )}
             </span>
           </button>

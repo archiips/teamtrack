@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  commitBreakdown,
   courseProgress,
+  daysSinceCommit,
   memberBreakdown,
   teamHealth,
 } from "../src/lib/insights";
@@ -142,5 +144,39 @@ describe("courseProgress", () => {
       teams: [...base.teams, { ...base.teams[1], id: "t3", memberIds: [] }],
     };
     expect(courseProgress(empty, "2026-10-13")[2].health.total).toBe(0);
+  });
+});
+describe("GitHub commits", () => {
+  const people = [
+    {
+      id: "a",
+      name: "Ana",
+      role: "student",
+      initials: "A",
+      color: "blue",
+      github: "AnaCodes",
+    },
+    { id: "b", name: "Bo", role: "student", initials: "B", color: "green" },
+  ] as const;
+  const commits = [
+    { login: "anacodes", name: "Ana R", at: "2030-01-03T10:00:00Z" },
+    { login: "AnaCodes", name: "Ana R", at: "2030-01-05T10:00:00Z" },
+    { login: null, name: "Bo L", at: "2030-01-04T10:00:00Z" },
+    { login: "stranger", name: "S", at: "2030-01-01T10:00:00Z" },
+  ];
+  it("matches commits to members by GitHub username, any case", () => {
+    const r = commitBreakdown(commits, [...people]);
+    expect(r.rows.map((x) => [x.user.id, x.commits, x.last])).toEqual([
+      ["a", 2, "2030-01-05T10:00:00Z"],
+      ["b", 0, ""],
+    ]);
+    expect(r.unmatched).toEqual([
+      { author: "Bo L", commits: 1 },
+      { author: "stranger", commits: 1 },
+    ]);
+  });
+  it("counts days since the newest commit", () => {
+    expect(daysSinceCommit(commits, new Date("2030-01-12T11:00:00Z"))).toBe(7);
+    expect(daysSinceCommit([], new Date())).toBeNull();
   });
 });

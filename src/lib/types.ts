@@ -9,6 +9,8 @@ export type User = {
   active?: boolean;
   /** Created this workspace: may edit the brief and checkpoints even as a student. */
   owner?: boolean;
+  /** GitHub username, to match this person's commits. */
+  github?: string;
 };
 export type Team = {
   id: string;
@@ -22,6 +24,8 @@ export type Team = {
   leaderId?: string;
   /** A proposed agreement: it replaces the current one once every member approves. */
   proposal?: { body: string; by: string; at: string; approvals: string[] };
+  /** The team's repo, readable through the TeamTrack GitHub App installation. */
+  github?: { installationId: number; repo: string; by: string; at: string };
 };
 export type Task = {
   id: string;

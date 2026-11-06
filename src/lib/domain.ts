@@ -387,6 +387,37 @@ export function apply(original: State, actorId: string, c: Command): State {
     if (!t.proposal) throw Error("There’s no proposal to withdraw");
     delete t.proposal;
     event(t.id, `Withdrew the proposed agreement`);
+  } else if (c.type === "team.github.link") {
+    // Sent only by the GitHub callback after GitHub confirmed the person can access
+    // the repo; the workspace API refuses it from browsers.
+    const t = access(c.teamId);
+    if (u.role !== "instructor") leader(t);
+    if (
+      typeof c.installationId !== "number" ||
+      typeof c.repo !== "string" ||
+      !/^[\w.-]+\/[\w.-]+$/.test(c.repo)
+    )
+      throw Error("Choose a repository");
+    t.github = {
+      installationId: c.installationId,
+      repo: c.repo,
+      by: actorId,
+      at: new Date().toISOString(),
+    };
+    event(t.id, `Connected GitHub repo ${c.repo}`);
+  } else if (c.type === "team.github.unlink") {
+    const t = access(c.teamId);
+    if (u.role !== "instructor") leader(t);
+    if (!t.github) throw Error("No repo is connected");
+    event(t.id, `Disconnected GitHub repo ${t.github.repo}`);
+    delete t.github;
+  } else if (c.type === "profile.github") {
+    const login =
+      typeof c.login === "string" ? c.login.trim().replace(/^@/, "") : "";
+    if (login && !/^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i.test(login))
+      throw Error("That isn’t a valid GitHub username");
+    if (login) u.github = login;
+    else delete u.github;
   } else if (c.type === "team.lead") {
     const t = access(c.teamId);
     if (u.role !== "instructor") leader(t);

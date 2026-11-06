@@ -69,6 +69,22 @@ Anyone can create an account on the live site, create a workspace and share its 
 - An instructor or organizer can replace a leaked invite code from the Invite dialog; people already in stay in.
 - Don't run `npm run test:accounts` against production: it creates accounts.
 
+## GitHub App (repo activity per team)
+
+Register once for the whole site; after that every team connects its own repo from **My team → Connect GitHub repo**, with no per-team setup. Until these env vars exist the GitHub features stay hidden.
+
+1. GitHub → Settings → Developer settings → GitHub Apps → **New GitHub App**.
+   - Name: anything unique, e.g. `TeamTrack CSS 474`. Homepage: `https://teamtrack-kappa.vercel.app`.
+   - Callback URL: `https://teamtrack-kappa.vercel.app/api/github/callback`. Check **Request user authorization (OAuth) during installation**.
+   - Webhook: active, URL `https://teamtrack-kappa.vercel.app/api/github/webhook`, secret = a long random string (`openssl rand -hex 32`).
+   - Repository permissions: **Contents: Read-only** (GitHub puts the commit list under it), **Pull requests: Read-only**, Metadata: Read-only. Nothing else.
+   - Subscribe to events: **Push**, **Pull request**.
+   - Where can it be installed: **Any account** (students install it on their own repos or class orgs).
+2. After creating: note the App ID, Client ID and the slug (the last part of the app's public URL); generate a client secret and a private key (.pem).
+3. Vercel → teamtrack → Settings → Environment Variables (Production): `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_WEBHOOK_SECRET`, and `GITHUB_APP_PRIVATE_KEY` = `base64 -i key.pem | tr -d '\n'` (raw PEM also works). Redeploy. Delete the .pem from Downloads afterwards; never commit it.
+
+TeamTrack reads only the last 100 commits and recent merged pull requests of the linked repo, cached for 10 minutes and refreshed on push. Linking is verified with the leader's own GitHub sign-in, so a team can only connect repos its leader can access. Local test harness: `tests/e2e/README.md`.
+
 ## Reset and release
 
 `npm run demo:reset` resets only the standalone `demo` namespace, its demo accounts (they re-create with the current DEMO_PASSWORD on next sign-in; run it after changing the password) and its demo LMS roster link (reconnects on the professor's next LMS launch). It never resets Canvas course workspaces. Use only for rehearsal/presentation preparation, not after collecting real pilot work.

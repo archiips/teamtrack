@@ -10,11 +10,17 @@ import {
   TeamMenu,
   TeamProgressChart,
 } from "@/components/insights";
-import { courseProgress, memberBreakdown, teamHealth } from "@/lib/insights";
+import {
+  courseProgress,
+  daysSinceCommit,
+  memberBreakdown,
+  teamHealth,
+} from "@/lib/insights";
 import { Doodles } from "@/components/doodles";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Folder } from "@/components/folder";
+import { GithubPanel, type GithubData } from "@/components/github-panel";
 import {
   AuthPanel,
   Onboarding,
@@ -63,6 +69,7 @@ import {
   Settings2,
   ChevronsUpDown,
   KeyRound,
+  GitBranch,
 } from "lucide-react";
 import type { State, Task, User, Command } from "@/lib/types";
 import { attention, isGroup, leaderOf } from "@/lib/domain";
@@ -112,7 +119,13 @@ export default function Page() {
     [manage, setManage] = useState<string | null>(null),
     [passwordOpen, setPasswordOpen] = useState(false),
     [switcher, setSwitcher] = useState(false),
-    [menu, setMenu] = useState(false);
+    [menu, setMenu] = useState(false),
+    [ghEnabled, setGhEnabled] = useState(false),
+    [ghData, setGhData] = useState<Record<string, GithubData>>({}),
+    [ghPick, setGhPick] = useState<{
+      token: string;
+      repos: { repo: string; private: boolean }[];
+    } | null>(null);
   // One place that takes a /api/workspace payload apart.
   function load(d: {
     state: State | null;
@@ -128,6 +141,7 @@ export default function Page() {
     setAccount(d.account || null);
     setWorkspaces(d.workspaces || []);
     setOpenTeams(d.openTeams || []);
+    setGhEnabled(!!(d as { github?: boolean }).github);
     if (d.userId) setUserId(d.userId);
     setNamespace(d.namespace || "");
     if (d.state)
@@ -212,6 +226,26 @@ export default function Page() {
           // Signed in already and opened someone's invite link: offer to join.
           if (code && d.account && d.state) setAdding(true);
         }
+        // Back from GitHub: linked, failed, or a list of repos to choose from.
+        const q = new URLSearchParams(location.search);
+        if (q.get("github") === "linked") {
+          setToast("GitHub repo connected");
+          setView("team");
+        }
+        if (q.get("github_error")) setError(q.get("github_error")!);
+        const pick = q.get("github_pick");
+        if (pick)
+          try {
+            const body = JSON.parse(
+              atob(pick.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+            );
+            setGhPick({ token: pick, repos: body.repos || [] });
+            setView("team");
+          } catch {
+            setError("GitHub didn’t finish connecting. Please try again.");
+          }
+        if (q.has("github") || q.has("github_error") || pick)
+          history.replaceState(null, "", "/");
         document.documentElement.classList.toggle(
           "embedded",
           window.self !== window.top,
@@ -221,6 +255,22 @@ export default function Page() {
       .catch(() => setError("Cannot connect. Please retry."))
       .finally(() => setLoading(false));
   }, []);
+  // Repo activity for the teams this person can see; reloads when links change.
+  const linked = s?.teams
+    .map((t) => t.github?.repo || "")
+    .filter(Boolean)
+    .join(",");
+  useEffect(() => {
+    if (!ghEnabled || !linked) return;
+    let live = true;
+    fetch("/api/github/activity")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d) => live && setGhData(d))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [ghEnabled, linked, cheer]);
   // Menus close on a click elsewhere or Escape.
   useEffect(() => {
     if (!menu && !switcher) return;
@@ -1076,6 +1126,18 @@ export default function Page() {
                 {prof && s.teams.length > 0 && (
                   <TeamProgressChart
                     rows={courseProgress(s, today())}
+                    notes={Object.fromEntries(
+                      s.teams.flatMap((t) => {
+                        const d = ghData[t.id];
+                        if (!t.github || !d || !("commits" in d)) return [];
+                        const days = daysSinceCommit(d.commits, new Date());
+                        return days === null
+                          ? [[t.id, "No commits yet"]]
+                          : days >= 7
+                            ? [[t.id, `No commits in ${days}d`]]
+                            : [];
+                      }),
+                    )}
                     onOpen={(id) => {
                       setTeamId(id);
                       setView("tasks");
@@ -1627,6 +1689,34 @@ export default function Page() {
                         Counts describe recorded activity. Review the work for
                         context.
                       </div>
+                      {prof && ghEnabled && (
+                        <div className="github-line">
+                          {t.github ? (
+                            <>
+                              GitHub: {t.github.repo}
+                              {(() => {
+                                const d = ghData[t.id];
+                                if (!d || !("commits" in d)) return null;
+                                const days = daysSinceCommit(
+                                  d.commits,
+                                  new Date(),
+                                );
+                                return (
+                                  <span>
+                                    {" "}
+                                    · {d.commits.length} commits ·{" "}
+                                    {days === null
+                                      ? "none yet"
+                                      : `last ${days === 0 ? "today" : `${days}d ago`}`}
+                                  </span>
+                                );
+                              })()}
+                            </>
+                          ) : (
+                            "GitHub: not connected yet"
+                          )}
+                        </div>
+                      )}
                       <button
                         className="panel-action"
                         onClick={() => {
@@ -1640,6 +1730,18 @@ export default function Page() {
                     </section>
                   </Folder>
                 ))}
+                {!prof && team && ghEnabled && (
+                  <GithubPanel
+                    team={team}
+                    s={s}
+                    userId={userId}
+                    canManage={leadId === userId}
+                    data={ghData[team.id]}
+                    busy={busy}
+                    avatar={(u) => <Avatar user={u} />}
+                    command={command}
+                  />
+                )}
               </div>
             )}
             {view === "agreement" && !team && (
@@ -1944,44 +2046,58 @@ export default function Page() {
               </div>
             )}
             {view === "activity" && (
-              <section className="panel activity-panel">
-                <div className="panel-title">
-                  <div>
-                    <h2>Every step has a story</h2>
-                    <p>Changes and contributions in {team?.name}.</p>
-                  </div>
-                  <Activity size={21} />
-                </div>
-                {s.events
-                  .filter((e) => e.teamId === team?.id)
-                  .map((e) => (
-                    <div className="event-row" key={e.id}>
-                      <Avatar
-                        user={s.users.find((u) => u.id === e.actorId)}
-                        small
-                      />
-                      <div>
-                        <strong>
-                          {s.users.find((u) => u.id === e.actorId)?.name}
-                        </strong>
-                        <p>{e.body}</p>
-                      </div>
-                      <time>
-                        {new Date(e.at).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </time>
+              <div className={ghEnabled && team ? "activity-grid" : ""}>
+                <section className="panel activity-panel">
+                  <div className="panel-title">
+                    <div>
+                      <h2>Every step has a story</h2>
+                      <p>Changes and contributions in {team?.name}.</p>
                     </div>
-                  ))}
-                {!s.events.length && (
-                  <div className="empty">
-                    Your team’s activity will appear here.
+                    <Activity size={21} />
                   </div>
+                  {s.events
+                    .filter((e) => e.teamId === team?.id)
+                    .map((e) => (
+                      <div className="event-row" key={e.id}>
+                        <Avatar
+                          user={s.users.find((u) => u.id === e.actorId)}
+                          small
+                        />
+                        <div>
+                          <strong>
+                            {s.users.find((u) => u.id === e.actorId)?.name}
+                          </strong>
+                          <p>{e.body}</p>
+                        </div>
+                        <time>
+                          {new Date(e.at).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </time>
+                      </div>
+                    ))}
+                  {!s.events.length && (
+                    <div className="empty">
+                      Your team’s activity will appear here.
+                    </div>
+                  )}
+                </section>
+                {ghEnabled && team && (
+                  <GithubPanel
+                    team={team}
+                    s={s}
+                    userId={userId}
+                    canManage={prof || leadId === userId}
+                    data={ghData[team.id]}
+                    busy={busy}
+                    avatar={(u) => <Avatar user={u} small />}
+                    command={command}
+                  />
                 )}
-              </section>
+              </div>
             )}
           </div>
           <footer className="workspace-footer">
@@ -2375,6 +2491,66 @@ export default function Page() {
               </button>
             </form>
           </div>
+        </Modal>
+      )}
+      {ghPick && (
+        <Modal
+          error={error}
+          title="Choose your team’s repo"
+          subtitle={
+            ghPick.repos.length
+              ? "These are the repos TeamTrack is installed on that you can access."
+              : "TeamTrack isn’t installed on any repo you can access yet."
+          }
+          onClose={() => setGhPick(null)}
+        >
+          {ghPick.repos.map((r) => (
+            <button
+              key={r.repo}
+              className="workspace-row"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                try {
+                  const res = await fetch("/api/github/link", {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "x-csrf-token": csrf,
+                    },
+                    body: JSON.stringify({ pick: ghPick.token, repo: r.repo }),
+                  });
+                  const d = await res.json();
+                  if (!res.ok) throw Error(d.error);
+                  setS(d.state);
+                  setGhPick(null);
+                  setToast("GitHub repo connected");
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <span className="onboard-icon small">
+                <GitBranch size={16} />
+              </span>
+              <span>
+                <strong>{r.repo}</strong>
+                <small>{r.private ? "Private" : "Public"}</small>
+              </span>
+              <ArrowRight size={16} />
+            </button>
+          ))}
+          {team && (
+            <a
+              className="secondary"
+              href={`/api/github/connect?teamId=${encodeURIComponent(team.id)}&install=1`}
+            >
+              Install TeamTrack on another repo
+            </a>
+          )}
         </Modal>
       )}
       {inviteOpen && s.inviteCode && (

@@ -5103,7 +5103,8 @@ nav button.active {
 .progress-row {
   width: 100%;
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr) 96px 104px;
+  /* The flag column grows for a second tag (overdue + stalled repo). */
+  grid-template-columns: 160px minmax(0, 1fr) 96px minmax(104px, auto);
   align-items: center;
   gap: 18px;
   padding: 12px 12px;
@@ -5772,4 +5773,120 @@ button.course-switch:disabled {
 }
 .manage-row .you {
   margin-left: 8px;
+}
+/* GitHub panel. */
+.github-panel .panel-title p {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.github-panel .panel-title a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--c7);
+  font-weight: 650;
+}
+.github-body {
+  padding: 0 23px 18px;
+}
+.github-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 18px;
+}
+.github-actions a.primary {
+  text-decoration: none;
+}
+.commit-count {
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.commit-count small {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--c44);
+}
+.unmatched-note {
+  padding: 10px 23px 0;
+}
+.github-recent {
+  padding: 8px 23px 6px;
+  border-top: 1px solid var(--c60);
+}
+.github-recent h3 {
+  font-size: 12px;
+  margin: 12px 0 6px;
+}
+.github-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 0;
+  font-size: 12px;
+  color: var(--c2);
+  text-decoration: none;
+  border-bottom: 1px solid var(--c60);
+}
+.github-item > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #8c52ff;
+}
+.github-item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.github-item small {
+  display: block;
+  font-size: 10px;
+  color: var(--c44);
+  margin-top: 3px;
+}
+.github-item:hover {
+  color: var(--c7);
+}
+.github-login {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 14px;
+}
+.github-login label {
+  margin-bottom: 0;
+}
+.github-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.github-line {
+  font-size: 11px;
+  color: var(--c44);
+  padding: 10px 23px;
+  border-top: 1px solid var(--c60);
+}
+.activity-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.progress-flag {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+@media (max-width: 900px) {
+  .activity-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.team-grid {
+  align-items: start;
 }

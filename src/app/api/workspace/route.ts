@@ -5,6 +5,7 @@ import { readState, mutate } from "@/lib/store";
 import { openTeams, visible } from "@/lib/domain";
 import { accountById } from "@/lib/accounts";
 import { listWorkspaces, rotateInvite } from "@/lib/workspaces";
+import { githubEnabled } from "@/lib/github";
 export const dynamic = "force-dynamic";
 export async function GET() {
   try {
@@ -31,6 +32,7 @@ export async function GET() {
         account,
         workspaces,
         openTeams: openTeams(s, a.userId),
+        github: githubEnabled(),
       },
       { headers },
     );
@@ -54,6 +56,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Request too large" }, { status: 413 });
     const c = JSON.parse(raw);
     if (!c || typeof c.type !== "string") throw Error("Invalid action");
+    // Repo links come only from the GitHub callback, which verifies access first.
+    if (c.type === "team.github.link") throw Error("Access denied");
     if (c.type === "invite.rotate") {
       const current = await readState(a.namespace);
       const me = current.users.find((u) => u.id === a.userId);
