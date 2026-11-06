@@ -35,20 +35,32 @@ describe("team access and work history", () => {
     expect(s.tasks.find((t) => t.id === "k1")?.status).toBe("done");
     expect(s.events[0].actorId).toBe("s1");
   });
-  it("renews agreement acceptance after publication", () => {
+  it("adopts a proposed agreement only when every member approves", () => {
     let s = apply(seed(), "s1", {
-      type: "agreement.accept",
-      teamId: "t1",
-      version: 1,
-    });
-    s = apply(s, "s1", {
-      type: "agreement.publish",
+      type: "agreement.propose",
       version: 1,
       teamId: "t1",
       body: "Meet every Tuesday and record work.",
     });
-    expect(s.teams[0].accepted).toEqual([]);
+    const at = s.teams[0].proposal!.at;
+    for (const id of ["s2", "s3"])
+      s = apply(s, id, {
+        type: "agreement.vote",
+        teamId: "t1",
+        proposedAt: at,
+        approve: true,
+      });
+    expect(s.teams[0].agreementVersion).toBe(1);
+    s = apply(s, "s4", {
+      type: "agreement.vote",
+      teamId: "t1",
+      proposedAt: at,
+      approve: true,
+    });
     expect(s.teams[0].agreementVersion).toBe(2);
+    expect(s.teams[0].agreement).toBe("Meet every Tuesday and record work.");
+    expect(s.teams[0].accepted).toEqual(["s1", "s2", "s3", "s4"]);
+    expect(s.teams[0].proposal).toBeUndefined();
   });
   it("reports specific attention reasons", () => {
     expect(attention(seed(), "t1").some((x) => x.includes("blocked"))).toBe(
@@ -111,21 +123,37 @@ it("preserves a correction record and rejects another author", () => {
   );
   expect(s.events[0].body).toContain("Completed two interviews");
 });
-it("retains previous agreement text and accepts only the expected version", () => {
+it("retains previous agreement text, and only the leader proposes", () => {
   const old = seed();
-  const s = apply(old, "s1", {
-    type: "agreement.publish",
+  let s = apply(old, "s1", {
+    type: "agreement.propose",
     teamId: "t1",
     body: "Updated agreement",
     version: 1,
   });
+  const at = s.teams[0].proposal!.at;
+  for (const id of ["s2", "s3", "s4"])
+    s = apply(s, id, {
+      type: "agreement.vote",
+      teamId: "t1",
+      proposedAt: at,
+      approve: true,
+    });
   expect(s.teams[0].agreementHistory?.[0].body).toBe(old.teams[0].agreement);
   expect(s.teams[0].agreementHistory?.[0].accepted).toEqual(["s2", "s3", "s4"]);
   expect(() =>
     apply(s, "s2", {
-      type: "agreement.publish",
+      type: "agreement.propose",
       teamId: "t1",
-      body: "Stale edit",
+      body: "Mine",
+      version: 2,
+    }),
+  ).toThrow("team leader");
+  expect(() =>
+    apply(s, "s1", {
+      type: "agreement.propose",
+      teamId: "t1",
+      body: "Stale",
       version: 1,
     }),
   ).toThrow("changed");

@@ -4,6 +4,7 @@ import {
   apply,
   blankState,
   isGroup,
+  leaderOf,
   openTeams,
   person,
   visible,
@@ -193,5 +194,116 @@ describe("group workspaces created before teams were automatic", () => {
     expect(() =>
       apply(s, "u_b", { type: "team.create", name: "Other" }),
     ).toThrow("one team");
+  });
+});
+describe("team leader and agreement votes", () => {
+  const withTeam = () => {
+    let s = fresh();
+    for (const id of ["u_b", "u_c"])
+      s = apply(s, id, { type: "team.join", teamId: s.teams[0].id });
+    return s;
+  };
+  const propose = (s: ReturnType<typeof fresh>, by = "u_a") =>
+    apply(s, by, {
+      type: "agreement.propose",
+      teamId: s.teams[0].id,
+      version: s.teams[0].agreementVersion,
+      body: "New rules",
+    });
+  const vote = (s: ReturnType<typeof fresh>, id: string, approve: boolean) =>
+    apply(s, id, {
+      type: "agreement.vote",
+      teamId: s.teams[0].id,
+      proposedAt: s.teams[0].proposal!.at,
+      approve,
+    });
+  it("makes the workspace creator the leader", () => {
+    const s = withTeam();
+    expect(leaderOf(s, s.teams[0])).toBe("u_a");
+    expect(() => propose(s, "u_b")).toThrow("team leader");
+  });
+  it("keeps the current agreement until everyone approves", () => {
+    let s = propose(withTeam());
+    expect(s.teams[0].proposal?.approvals).toEqual(["u_a"]);
+    s = vote(s, "u_b", true);
+    expect(s.teams[0].agreementVersion).toBe(1);
+    s = vote(s, "u_c", true);
+    expect(s.teams[0]).toMatchObject({
+      agreement: "New rules",
+      agreementVersion: 2,
+    });
+  });
+  it("drops the proposal when anyone declines, and the leader can withdraw", () => {
+    let s = vote(propose(withTeam()), "u_b", false);
+    expect(s.teams[0].proposal).toBeUndefined();
+    expect(s.teams[0].agreementVersion).toBe(1);
+    s = apply(propose(s), "u_a", {
+      type: "agreement.withdraw",
+      teamId: s.teams[0].id,
+    });
+    expect(s.teams[0].proposal).toBeUndefined();
+  });
+  it("refuses a vote on a proposal that was replaced", () => {
+    const s = propose(withTeam());
+    const at = s.teams[0].proposal!.at;
+    const replaced = structuredClone(s);
+    replaced.teams[0].proposal!.at = "2000-01-01T00:00:00.000Z";
+    expect(() =>
+      apply(replaced, "u_b", {
+        type: "agreement.vote",
+        teamId: s.teams[0].id,
+        proposedAt: at,
+        approve: true,
+      }),
+    ).toThrow("changed");
+  });
+  it("adopts a single-member team's proposal at once", () => {
+    const s = propose(fresh());
+    expect(s.teams[0].agreementVersion).toBe(2);
+  });
+  it("adopts once the last holdout leaves", () => {
+    let s = vote(propose(withTeam()), "u_b", true);
+    s = apply(s, "u_c", { type: "team.leave", teamId: s.teams[0].id });
+    expect(s.teams[0].agreementVersion).toBe(2);
+  });
+  it("transfers leadership, and with it the organizer role in a student workspace", () => {
+    let s = withTeam();
+    expect(() =>
+      apply(s, "u_a", { type: "team.leave", teamId: s.teams[0].id }),
+    ).toThrow("team leader before leaving");
+    expect(() =>
+      apply(s, "u_b", {
+        type: "team.lead",
+        teamId: s.teams[0].id,
+        userId: "u_b",
+      }),
+    ).toThrow("team leader");
+    s = apply(s, "u_a", {
+      type: "team.lead",
+      teamId: s.teams[0].id,
+      userId: "u_b",
+    });
+    expect(leaderOf(s, s.teams[0])).toBe("u_b");
+    expect(s.users.find((u) => u.id === "u_b")?.owner).toBe(true);
+    expect(s.users.find((u) => u.id === "u_a")?.owner).toBe(false);
+    expect(() =>
+      apply(s, "u_a", { type: "project.update", title: "x", description: "y" }),
+    ).toThrow("organizer");
+    s = apply(s, "u_a", { type: "team.leave", teamId: s.teams[0].id });
+    expect(s.teams[0].memberIds).toEqual(["u_b", "u_c"]);
+  });
+  it("lets only the leader rename the team", () => {
+    const s = withTeam();
+    expect(() =>
+      apply(s, "u_b", {
+        type: "team.update",
+        teamId: s.teams[0].id,
+        name: "X",
+      }),
+    ).toThrow("team leader");
+    expect(
+      apply(s, "u_a", { type: "team.update", teamId: s.teams[0].id, name: "X" })
+        .teams[0].name,
+    ).toBe("X");
   });
 });

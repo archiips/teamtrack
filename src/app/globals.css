@@ -5721,3 +5721,55 @@ button.course-switch:disabled {
 .join-team.single {
   grid-template-columns: minmax(0, 640px);
 }
+/* Agreement proposals and votes. */
+.proposal-box {
+  margin: 22px 23px 0;
+  padding: 20px;
+  border: 1px dashed #8c52ff;
+  border-radius: 14px;
+  background: #8c52ff10;
+}
+.proposal-box h3 {
+  font-size: 15px;
+  margin: 12px 0 4px;
+}
+.agreement-text.proposed {
+  padding: 0;
+  margin: 8px 0 14px;
+}
+.vote-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.vote-chips .person-chip {
+  opacity: 0.65;
+}
+.vote-chips .person-chip.approved {
+  opacity: 1;
+  border-color: #8c52ff;
+}
+.vote-chips .person-chip > svg {
+  color: var(--c44);
+}
+.vote-chips .person-chip.approved > svg {
+  color: #8c52ff;
+}
+.proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.proposal-actions .accepted {
+  margin: 0;
+}
+.agreement-note {
+  font-size: 12px;
+  color: var(--c44);
+  padding: 18px 23px 23px;
+}
+.manage-row .you {
+  margin-left: 8px;
+}

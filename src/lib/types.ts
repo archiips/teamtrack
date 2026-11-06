@@ -18,6 +18,10 @@ export type Team = {
   agreementVersion: number;
   accepted: string[];
   agreementHistory?: { version: number; body: string; accepted: string[] }[];
+  /** Only the leader proposes agreement changes; see leaderOf for teams without one. */
+  leaderId?: string;
+  /** A proposed agreement: it replaces the current one once every member approves. */
+  proposal?: { body: string; by: string; at: string; approvals: string[] };
 };
 export type Task = {
   id: string;

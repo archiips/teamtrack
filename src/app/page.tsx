@@ -65,7 +65,7 @@ import {
   KeyRound,
 } from "lucide-react";
 import type { State, Task, User, Command } from "@/lib/types";
-import { attention, isGroup } from "@/lib/domain";
+import { attention, isGroup, leaderOf } from "@/lib/domain";
 type View = "overview" | "tasks" | "team" | "agreement" | "activity";
 type OpenTeam = { id: string; name: string; size: number };
 const labels = { todo: "To do", in_progress: "In progress", done: "Done" };
@@ -364,6 +364,13 @@ export default function Page() {
     blocked = all.filter((t) => t.blocker && t.status !== "done").length,
     task = s.tasks.find((t) => t.id === selected),
     members = s.users.filter((u) => team?.memberIds.includes(u.id)),
+    leadId = team ? leaderOf(s, team) : undefined,
+    leadName = s.users.find((u) => u.id === leadId)?.name || "your team leader",
+    proposal = team?.proposal,
+    mustVote =
+      !!proposal &&
+      !!team?.memberIds.includes(userId) &&
+      !proposal.approvals.includes(userId),
     filtered = tasks.filter(
       (t) =>
         (filter === "all" ||
@@ -453,6 +460,15 @@ export default function Page() {
             },
           ]
         : [
+            ...(mustVote
+              ? [
+                  {
+                    label: "Vote on the proposed agreement",
+                    done: false,
+                    view: "agreement" as const,
+                  },
+                ]
+              : []),
             {
               label: "Accept your team agreement",
               done: !!team && team.accepted.includes(userId),
@@ -1588,7 +1604,10 @@ export default function Page() {
                             {t.memberIds.length === 1
                               ? "1 person"
                               : `${t.memberIds.length} people`}
-                            , one shared project.
+                            {leaderOf(s, t)
+                              ? ` · led by ${s.users.find((u) => u.id === leaderOf(s, t))?.name.split(" ")[0]}`
+                              : ""}
+                            .
                           </p>
                         </div>
                         <button
@@ -1660,7 +1679,10 @@ export default function Page() {
                           Version {team.agreementVersion}
                         </span>
                         <h2>How we work together</h2>
-                        <p>Our shared expectations for {team.name}.</p>
+                        <p>
+                          Our shared expectations for {team.name}. Team leader:{" "}
+                          {leadName}.
+                        </p>
                       </div>
                       <FileCheck2 size={28} />
                     </div>
@@ -1697,6 +1719,114 @@ export default function Page() {
                           Accept this agreement
                         </button>
                       ))}
+                    {proposal && (
+                      <div className="proposal-box">
+                        <span className="version">
+                          Proposed change · {proposal.approvals.length} of{" "}
+                          {team.memberIds.length} approved
+                        </span>
+                        <h3>
+                          {s.users.find((u) => u.id === proposal.by)?.name ||
+                            "The team leader"}{" "}
+                          proposed a new version
+                        </h3>
+                        <p className="form-note">
+                          The agreement above stays in place until everyone
+                          approves. One decline sends it back to the leader.
+                        </p>
+                        <div className="agreement-text proposed">
+                          {proposal.body.split("\n").map((line, i) => (
+                            <p key={i}>
+                              <CheckCircle2 size={19} />
+                              {line}
+                            </p>
+                          ))}
+                        </div>
+                        <div className="vote-chips">
+                          {members.map((u) => (
+                            <span
+                              key={u.id}
+                              className={`person-chip ${proposal.approvals.includes(u.id) ? "approved" : ""}`}
+                            >
+                              <Avatar user={u} small />
+                              {u.name.split(" ")[0]}
+                              {proposal.approvals.includes(u.id) ? (
+                                <Check size={13} />
+                              ) : (
+                                <Clock3 size={13} />
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="proposal-actions">
+                          {mustVote && (
+                            <>
+                              <button
+                                className="primary"
+                                disabled={busy}
+                                onClick={() =>
+                                  command(
+                                    {
+                                      type: "agreement.vote",
+                                      teamId: team.id,
+                                      proposedAt: proposal.at,
+                                      approve: true,
+                                    },
+                                    "Vote recorded",
+                                  )
+                                }
+                              >
+                                <Check size={16} />
+                                Approve
+                              </button>
+                              <button
+                                className="secondary"
+                                disabled={busy}
+                                onClick={() =>
+                                  confirm(
+                                    "Decline this proposal? It won’t be adopted, and the leader can revise it.",
+                                  ) &&
+                                  command(
+                                    {
+                                      type: "agreement.vote",
+                                      teamId: team.id,
+                                      proposedAt: proposal.at,
+                                      approve: false,
+                                    },
+                                    "Proposal declined",
+                                  )
+                                }
+                              >
+                                Decline
+                              </button>
+                            </>
+                          )}
+                          {!mustVote && team.memberIds.includes(userId) && (
+                            <span className="accepted">
+                              <CheckCircle2 size={18} />
+                              You approved. Waiting for the others.
+                            </span>
+                          )}
+                          {leadId === userId && (
+                            <button
+                              className="text-button danger"
+                              disabled={busy}
+                              onClick={() =>
+                                command(
+                                  {
+                                    type: "agreement.withdraw",
+                                    teamId: team.id,
+                                  },
+                                  "Proposal withdrawn",
+                                )
+                              }
+                            >
+                              Withdraw proposal
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {team.agreementHistory?.length ? (
                       <details className="agreement-edit">
                         <summary>Previous versions</summary>
@@ -1718,44 +1848,59 @@ export default function Page() {
                         ))}
                       </details>
                     ) : null}
-                    <details className="agreement-edit">
-                      <summary>Update our agreement</summary>
-                      <p>
-                        Publishing a new version asks every member to accept
-                        again.
-                      </p>
-                      <form
-                        onSubmit={async (e) => {
-                          e.preventDefault();
-                          const f = new FormData(e.currentTarget);
-                          if (
-                            confirm(
-                              "Publish a new agreement version? Everyone will need to accept again.",
-                            )
-                          )
-                            await command(
+                    {leadId === userId ? (
+                      <details className="agreement-edit">
+                        <summary>
+                          {proposal
+                            ? "Revise the proposal"
+                            : "Propose a change"}
+                        </summary>
+                        <p>
+                          Your team votes on it. It replaces the current
+                          agreement once everyone approves.
+                        </p>
+                        <form
+                          key={proposal?.at || "new"}
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            const details = e.currentTarget.closest("details");
+                            const f = new FormData(e.currentTarget);
+                            const ok = await command(
                               {
-                                type: "agreement.publish",
+                                type: "agreement.propose",
                                 version: team.agreementVersion,
                                 teamId: team.id,
                                 body: f.get("body"),
                               },
-                              "New agreement published",
+                              team.memberIds.length > 1
+                                ? "Proposal sent for a vote"
+                                : "Agreement updated",
                             );
-                        }}
-                      >
-                        <textarea
-                          name="body"
-                          aria-label="Agreement text"
-                          defaultValue={team.agreement}
-                          required
-                          maxLength={12000}
-                        />
-                        <button className="secondary" disabled={busy}>
-                          Publish new version
-                        </button>
-                      </form>
-                    </details>
+                            if (ok && details) details.open = false;
+                          }}
+                        >
+                          <textarea
+                            name="body"
+                            aria-label="Agreement text"
+                            defaultValue={proposal?.body ?? team.agreement}
+                            required
+                            maxLength={12000}
+                          />
+                          <button className="secondary" disabled={busy}>
+                            {team.memberIds.length > 1
+                              ? proposal
+                                ? "Replace the proposal"
+                                : "Propose for a vote"
+                              : "Save new version"}
+                          </button>
+                        </form>
+                      </details>
+                    ) : (
+                      <p className="agreement-note">
+                        Only the team leader, {leadName}, can propose changes.
+                        You’ll get a vote on any change.
+                      </p>
+                    )}
                   </section>
                 </Folder>
                 <section className="panel">
@@ -1764,7 +1909,7 @@ export default function Page() {
                       <h2>On the same page</h2>
                       <p>
                         {team.accepted.length} of {members.length} members
-                        accepted
+                        accepted the current version
                       </p>
                     </div>
                   </div>
@@ -1772,11 +1917,20 @@ export default function Page() {
                     <div className="member-row" key={u.id}>
                       <Avatar user={u} />
                       <div>
-                        <strong>{u.name}</strong>
+                        <strong>
+                          {u.name}
+                          {u.id === leadId && (
+                            <span className="you">Leader</span>
+                          )}
+                        </strong>
                         <span>
                           {team.accepted.includes(u.id)
                             ? "Accepted current version"
                             : "Awaiting acceptance"}
+                          {proposal &&
+                            (proposal.approvals.includes(u.id)
+                              ? " · approved the proposal"
+                              : " · hasn’t voted yet")}
                         </span>
                       </div>
                       {team.accepted.includes(u.id) ? (
@@ -2242,46 +2396,78 @@ export default function Page() {
         (() => {
           const t = s.teams.find((x) => x.id === manage);
           if (!t) return null;
-          const people = s.users.filter((u) => t.memberIds.includes(u.id));
+          const people = s.users.filter((u) => t.memberIds.includes(u.id)),
+            lead = leaderOf(s, t),
+            canLead = prof || lead === userId;
           return (
             <Modal
               error={error}
               title={`Manage ${t.name}`}
               subtitle={
                 prof
-                  ? "Rename the team and change who’s on it."
-                  : "Rename your team, or leave it if you joined the wrong one."
+                  ? "Rename the team, change who’s on it, or choose its leader."
+                  : lead === userId
+                    ? "You lead this team. Rename it or hand leadership to a teammate."
+                    : `${s.users.find((u) => u.id === lead)?.name || "Your leader"} leads this team.`
               }
               onClose={() => setManage(null)}
             >
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  await command(
-                    { type: "team.update", teamId: t.id, name: f.get("name") },
-                    "Team renamed",
-                  );
-                }}
-              >
-                <label>
-                  Team name
-                  <input
-                    name="name"
-                    defaultValue={t.name}
-                    required
-                    maxLength={120}
-                  />
-                </label>
-                <button className="secondary" disabled={busy}>
-                  Save name
-                </button>
-              </form>
+              {canLead && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    await command(
+                      {
+                        type: "team.update",
+                        teamId: t.id,
+                        name: f.get("name"),
+                      },
+                      "Team renamed",
+                    );
+                  }}
+                >
+                  <label>
+                    Team name
+                    <input
+                      name="name"
+                      defaultValue={t.name}
+                      required
+                      maxLength={120}
+                    />
+                  </label>
+                  <button className="secondary" disabled={busy}>
+                    Save name
+                  </button>
+                </form>
+              )}
               <h3 className="modal-section">Members</h3>
               {people.map((u) => (
                 <div className="manage-row" key={u.id}>
                   <Avatar user={u} small />
-                  <span>{u.name}</span>
+                  <span>
+                    {u.name}
+                    {u.id === lead && <span className="you">Leader</span>}
+                  </span>
+                  {canLead && u.id !== lead && (
+                    <button
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() =>
+                        confirm(
+                          group && lead === userId
+                            ? `Make ${u.name} team leader? They’ll also become the workspace organizer, and you’ll no longer be able to change the agreement or the project brief.`
+                            : `Make ${u.name} team leader?`,
+                        ) &&
+                        command(
+                          { type: "team.lead", teamId: t.id, userId: u.id },
+                          `${u.name} now leads ${t.name}`,
+                        )
+                      }
+                    >
+                      Make leader
+                    </button>
+                  )}
                   {prof && (
                     <button
                       className="text-button danger"
@@ -2330,9 +2516,14 @@ export default function Page() {
               )}
               {!prof && t.memberIds.includes(userId) && (
                 <div className="modal-actions">
+                  {lead === userId && people.length > 1 && (
+                    <span className="form-note">
+                      Make someone else leader before leaving.
+                    </span>
+                  )}
                   <button
                     className="secondary danger"
-                    disabled={busy}
+                    disabled={busy || (lead === userId && people.length > 1)}
                     onClick={async () => {
                       if (!confirm(`Leave ${t.name}?`)) return;
                       if (

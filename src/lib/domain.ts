@@ -1,5 +1,5 @@
 import { today } from "./dates";
-import { State, Command, Task, User } from "./types";
+import { State, Command, Task, Team, User } from "./types";
 const text = (v: unknown, max = 4000) => {
   if (typeof v !== "string" || !v.trim() || v.length > max)
     throw Error("Please enter valid text");
@@ -71,15 +71,44 @@ export function person(
 export function isGroup(s: State) {
   return !!s.inviteCode && !s.users.some((u) => u.role === "instructor");
 }
-function newTeam(name: string, memberIds: string[]) {
+/**
+ * The team's leader: the one recorded, else the workspace creator if they're on the
+ * team, else its first member (teams made before leaders existed).
+ */
+export function leaderOf(s: State, t: Team): string | undefined {
+  if (t.leaderId && t.memberIds.includes(t.leaderId)) return t.leaderId;
+  return (
+    t.memberIds.find((id) => s.users.some((u) => u.id === id && u.owner)) ??
+    t.memberIds[0]
+  );
+}
+/** Adopts the proposal once every current member has approved it. */
+function settle(t: Team) {
+  const p = t.proposal;
+  if (!p || !t.memberIds.length) return false;
+  if (!t.memberIds.every((m) => p.approvals.includes(m))) return false;
+  t.agreementHistory ??= [];
+  t.agreementHistory.push({
+    version: t.agreementVersion,
+    body: t.agreement,
+    accepted: [...t.accepted],
+  });
+  t.agreement = p.body;
+  t.agreementVersion++;
+  t.accepted = [...t.memberIds];
+  delete t.proposal;
+  return true;
+}
+function newTeam(name: string, memberIds: string[]): Team {
   return {
     id: crypto.randomUUID(),
     name,
     memberIds,
+    leaderId: memberIds[0],
     agreement:
       "We meet once a week and reply in our group chat within a day.\nEvery task has one owner and a due date.\nIf something is in the way, we raise a blocker early.",
     agreementVersion: 1,
-    accepted: [] as string[],
+    accepted: [],
   };
 }
 export function blankState(
@@ -161,7 +190,7 @@ export function apply(original: State, actorId: string, c: Command): State {
       throw Error("Only the workspace organizer can change this");
   };
   const teamOf = (id: string) => s.teams.find((t) => t.memberIds.includes(id));
-  const removeMember = (t: State["teams"][number], id: string, why: string) => {
+  const removeMember = (t: Team, id: string, why: string) => {
     if (
       s.tasks.some(
         (x) => x.teamId === t.id && x.ownerId === id && x.status !== "done",
@@ -170,6 +199,18 @@ export function apply(original: State, actorId: string, c: Command): State {
       throw Error(why);
     t.memberIds = t.memberIds.filter((m) => m !== id);
     t.accepted = t.accepted.filter((m) => m !== id);
+    if (t.proposal) {
+      t.proposal.approvals = t.proposal.approvals.filter((m) => m !== id);
+      // The proposer left: their proposal goes with them.
+      if (t.proposal.by === id) delete t.proposal;
+      else if (settle(t))
+        event(t.id, `Team agreement version ${t.agreementVersion} adopted`);
+    }
+    if (t.leaderId === id) t.leaderId = t.memberIds[0];
+  };
+  const leader = (t: Team) => {
+    if (leaderOf(s, t) !== actorId)
+      throw Error("Only the team leader can do this");
   };
   const access = (id: unknown) => {
     const t = s.teams.find((x) => x.id === id);
@@ -304,20 +345,61 @@ export function apply(original: State, actorId: string, c: Command): State {
       t.accepted.push(actorId);
       event(t.id, `Accepted team agreement version ${t.agreementVersion}`);
     }
-  } else if (c.type === "agreement.publish") {
+  } else if (c.type === "agreement.propose") {
     const t = access(c.teamId);
+    leader(t);
     if (t.agreementVersion !== c.version)
-      throw Error("This agreement changed. Reload before publishing.");
-    t.agreementHistory ??= [];
-    t.agreementHistory.push({
-      version: t.agreementVersion,
-      body: t.agreement,
-      accepted: [...t.accepted],
-    });
-    t.agreement = text(c.body, 12000);
-    t.agreementVersion++;
-    t.accepted = [];
-    event(t.id, `Published team agreement version ${t.agreementVersion}`);
+      throw Error("This agreement changed. Reload before proposing.");
+    const body = text(c.body, 12000);
+    if (body === t.agreement) throw Error("That’s the current agreement");
+    // A new proposal replaces any pending one; the leader's proposal is their vote.
+    t.proposal = {
+      body,
+      by: actorId,
+      at: new Date().toISOString(),
+      approvals: [actorId],
+    };
+    if (settle(t))
+      event(t.id, `Team agreement version ${t.agreementVersion} adopted`);
+    else event(t.id, `Proposed a new team agreement for a vote`);
+  } else if (c.type === "agreement.vote") {
+    const t = access(c.teamId);
+    if (!t.memberIds.includes(actorId))
+      throw Error("Only team members can vote");
+    if (!t.proposal || t.proposal.at !== c.proposedAt)
+      throw Error("This proposal changed. Reload and read it again.");
+    if (c.approve === true) {
+      if (!t.proposal.approvals.includes(actorId))
+        t.proposal.approvals.push(actorId);
+      event(t.id, `Approved the proposed agreement`);
+      if (settle(t))
+        event(
+          t.id,
+          `Team agreement version ${t.agreementVersion} adopted by everyone`,
+        );
+    } else {
+      delete t.proposal;
+      event(t.id, `Declined the proposed agreement, so it was not adopted`);
+    }
+  } else if (c.type === "agreement.withdraw") {
+    const t = access(c.teamId);
+    leader(t);
+    if (!t.proposal) throw Error("There’s no proposal to withdraw");
+    delete t.proposal;
+    event(t.id, `Withdrew the proposed agreement`);
+  } else if (c.type === "team.lead") {
+    const t = access(c.teamId);
+    if (u.role !== "instructor") leader(t);
+    const next = s.users.find((x) => x.id === c.userId);
+    if (!next || !t.memberIds.includes(next.id))
+      throw Error("Choose someone on this team");
+    t.leaderId = next.id;
+    // In a student's own workspace the leader is also its organizer.
+    if (isGroup(s) && u.owner) {
+      u.owner = false;
+      next.owner = true;
+    }
+    event(t.id, `Made ${next.name} team leader`);
   } else if (c.type === "task.delete") {
     const t = s.tasks.find((x) => x.id === c.id);
     if (!t) throw Error("Access denied");
@@ -341,10 +423,14 @@ export function apply(original: State, actorId: string, c: Command): State {
     const t = s.teams.find((x) => x.id === c.teamId);
     if (!t) throw Error("That team no longer exists");
     t.memberIds.push(actorId);
+    if (!leaderOf(s, { ...t, memberIds: t.memberIds.slice(0, -1) }))
+      t.leaderId = actorId;
     event(t.id, `Joined the team`);
   } else if (c.type === "team.leave") {
     const t = access(c.teamId);
     if (!t.memberIds.includes(actorId)) throw Error("You’re not on this team");
+    if (leaderOf(s, t) === actorId && t.memberIds.length > 1)
+      throw Error("Make someone else team leader before leaving");
     removeMember(
       t,
       actorId,
@@ -354,6 +440,7 @@ export function apply(original: State, actorId: string, c: Command): State {
   } else if (c.type === "team.update") {
     const t = access(c.teamId);
     if (c.name !== undefined) {
+      if (u.role !== "instructor") leader(t);
       t.name = text(c.name, 120);
       event(t.id, `Renamed the team “${t.name}”`);
     }
@@ -393,6 +480,7 @@ export function apply(original: State, actorId: string, c: Command): State {
       id: crypto.randomUUID(),
       name: text(c.name, 120),
       memberIds,
+      leaderId: memberIds[0],
       agreement:
         "Agree on meeting times, task ownership and how your team raises blockers.",
       agreementVersion: 1,

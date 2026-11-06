@@ -9,6 +9,7 @@ A deployed classroom MVP for student teamwork and professor oversight, with task
 3. Press **Invite** (top right) and share the link or the 8-character code. People who open the link create an account and land in the workspace.
 4. In a student's workspace everyone who joins lands on the team automatically. In an instructor's workspace each student opens **My team** and joins or starts a team; the instructor can also create teams and add or remove people under **Manage**.
 5. Add tasks with an owner and due date, post updates with evidence links, raise blockers, and accept the team agreement.
+6. Each team has a leader (whoever created it). Only the leader proposes agreement changes; a change takes effect when every member approves, and one decline sends it back. The leader can hand leadership to a teammate under **Manage**; in a student's workspace the organizer role goes with it.
 
 One account can belong to several workspaces; switch from the avatar menu (top right) or the workspace card in the sidebar. There is no email service: a forgotten password is reset by the operator with `scripts/reset-password.ts` (see the operations guide). Canvas is optional; it works without it.
 
