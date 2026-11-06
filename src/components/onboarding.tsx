@@ -299,6 +299,7 @@ export function Onboarding({
                 void act("create", {
                   action: "create",
                   role,
+                  team: f.get("team") ?? "",
                   course: f.get("course"),
                   project: f.get("project"),
                   description: f.get("description"),
@@ -313,8 +314,12 @@ export function Onboarding({
               >
                 {(
                   [
-                    ["student", "I’m a student", "Set it up for my group"],
-                    ["instructor", "I’m the instructor", "See every team"],
+                    ["student", "I’m a student", "One workspace for my team"],
+                    [
+                      "instructor",
+                      "I’m the instructor",
+                      "Several teams, I see all",
+                    ],
                   ] as const
                 ).map(([id, label, hint]) => (
                   <button
@@ -360,6 +365,14 @@ export function Onboarding({
                   />
                 </label>
               </div>
+              {role === "student" && (
+                <label>
+                  <span>
+                    Team name <small>(optional, defaults to the project)</small>
+                  </span>
+                  <input name="team" placeholder="Byte Club" maxLength={120} />
+                </label>
+              )}
               <label>
                 <span>
                   What’s the project about? <small>(optional)</small>

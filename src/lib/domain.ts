@@ -64,8 +64,32 @@ export function person(
   return { id, name, email, role, initials, color, active: true };
 }
 /** A new, empty workspace whose only member is its creator. */
+/**
+ * A workspace a student set up for their own group: no instructor, exactly one team.
+ * Instructor workspaces hold any number of teams.
+ */
+export function isGroup(s: State) {
+  return !!s.inviteCode && !s.users.some((u) => u.role === "instructor");
+}
+function newTeam(name: string, memberIds: string[]) {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    memberIds,
+    agreement:
+      "We meet once a week and reply in our group chat within a day.\nEvery task has one owner and a due date.\nIf something is in the way, we raise a blocker early.",
+    agreementVersion: 1,
+    accepted: [] as string[],
+  };
+}
 export function blankState(
-  b: { course: string; project: string; description: string; due: string },
+  b: {
+    course: string;
+    project: string;
+    description: string;
+    due: string;
+    team?: string;
+  },
   creator: User,
   inviteCode: string,
 ): State {
@@ -91,7 +115,11 @@ export function blankState(
       due: new Date(start + step * (i + 1)).toISOString().slice(0, 10),
     })),
     users: [{ ...creator, owner: true }],
-    teams: [],
+    // A student's workspace is their group, so its one team exists from the start.
+    teams:
+      creator.role === "student"
+        ? [newTeam(b.team?.trim() ? text(b.team, 120) : project, [creator.id])]
+        : [],
     tasks: [],
     entries: [],
     events: [],
@@ -302,15 +330,9 @@ export function apply(original: State, actorId: string, c: Command): State {
   } else if (c.type === "team.create" && u.role === "student") {
     // Students form their own team and become its first member.
     if (teamOf(actorId)) throw Error("You’re already on a team");
-    const t = {
-      id: crypto.randomUUID(),
-      name: text(c.name, 120),
-      memberIds: [actorId],
-      agreement:
-        "We meet once a week and reply in our group chat within a day.\nEvery task has one owner and a due date.\nIf something is in the way, we raise a blocker early.",
-      agreementVersion: 1,
-      accepted: [],
-    };
+    if (isGroup(s) && s.teams.length)
+      throw Error("This workspace has one team. Join it instead.");
+    const t = newTeam(text(c.name, 120), [actorId]);
     s.teams.push(t);
     event(t.id, `Started team “${t.name}”`);
   } else if (c.type === "team.join") {

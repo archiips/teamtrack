@@ -3,6 +3,7 @@ import { seed } from "../src/lib/seed";
 import {
   apply,
   blankState,
+  isGroup,
   openTeams,
   person,
   visible,
@@ -33,7 +34,10 @@ describe("own workspaces", () => {
       owner: true,
       initials: "JR",
     });
-    expect(s.teams).toEqual([]);
+    // A student's workspace is their group: one team, named after the project.
+    expect(s.teams.map((t) => [t.name, t.memberIds])).toEqual([
+      ["Group app", ["u_a"]],
+    ]);
     expect(s.checkpoints?.map((c) => c.title)).toEqual([
       "Plan",
       "Build",
@@ -42,21 +46,29 @@ describe("own workspaces", () => {
     ]);
     expect(s.checkpoints?.at(-1)?.due).toBe("2030-01-15");
   });
-  it("lets a student start a team and a classmate join it", () => {
-    let s = apply(fresh(), "u_a", { type: "team.create", name: "Debuggers" });
-    expect(s.teams[0].memberIds).toEqual(["u_a"]);
+  it("names the team when given, and leaves instructor workspaces teamless", () => {
+    const b = { course: "C", project: "P", description: "", due: "2030-01-15" };
+    expect(
+      blankState({ ...b, team: "Debuggers" }, creator, "X").teams[0].name,
+    ).toBe("Debuggers");
+    const prof = person("u_p", "Dr. Lee", "lee@school.edu", "instructor");
+    expect(blankState(b, prof, "X").teams).toEqual([]);
+  });
+  it("lets a classmate join the one team but not start a second", () => {
+    let s = fresh();
+    expect(isGroup(s)).toBe(true);
     expect(openTeams(s, "u_b")).toEqual([
-      { id: s.teams[0].id, name: "Debuggers", size: 1 },
+      { id: s.teams[0].id, name: "Group app", size: 1 },
     ]);
+    expect(() =>
+      apply(s, "u_b", { type: "team.create", name: "Second" }),
+    ).toThrow("one team");
     s = apply(s, "u_b", { type: "team.join", teamId: s.teams[0].id });
     expect(s.teams[0].memberIds).toEqual(["u_a", "u_b"]);
     expect(openTeams(s, "u_b")).toEqual([]);
-    expect(() =>
-      apply(s, "u_b", { type: "team.create", name: "Second" }),
-    ).toThrow("already on a team");
   });
   it("keeps a member with open tasks from leaving", () => {
-    let s = apply(fresh(), "u_a", { type: "team.create", name: "Debuggers" });
+    let s = fresh();
     const teamId = s.teams[0].id;
     s = apply(s, "u_a", {
       type: "task.create",
@@ -86,7 +98,7 @@ describe("own workspaces", () => {
     ).toThrow("organizer");
   });
   it("hides classmates' emails from students", () => {
-    const s = apply(fresh(), "u_a", { type: "team.create", name: "Debuggers" });
+    const s = fresh();
     const t = apply(s, "u_b", { type: "team.join", teamId: s.teams[0].id });
     const v = visible(t, "u_b");
     expect(v.users.find((u) => u.id === "u_a")?.email).toBeUndefined();
@@ -125,7 +137,7 @@ describe("instructor team management", () => {
 });
 describe("checkpoints", () => {
   it("lets the organizer rename, re-date and delete checkpoints", () => {
-    let s = apply(fresh(), "u_a", { type: "team.create", name: "Debuggers" });
+    let s = fresh();
     const [plan, build] = s.checkpoints!;
     s = apply(s, "u_a", {
       type: "task.create",
@@ -171,5 +183,15 @@ describe("checkpoints", () => {
     expect(() =>
       apply(s, "u_a", { type: "checkpoint.delete", id: s.checkpoints![0].id }),
     ).toThrow("at least one");
+  });
+});
+describe("group workspaces created before teams were automatic", () => {
+  it("let the first student name the team, then no second one", () => {
+    let s = fresh();
+    s.teams = [];
+    s = apply(s, "u_a", { type: "team.create", name: "Late team" });
+    expect(() =>
+      apply(s, "u_b", { type: "team.create", name: "Other" }),
+    ).toThrow("one team");
   });
 });

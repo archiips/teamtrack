@@ -1,6 +1,6 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { accountById, accountTables } from "./accounts";
-import { blankState, person } from "./domain";
+import { blankState, isGroup, person } from "./domain";
 import type { State } from "./types";
 
 // No 0/O or 1/I, so a code read aloud or copied by hand still works.
@@ -64,6 +64,7 @@ export async function createWorkspace(
         project: String(body.project ?? ""),
         description: String(body.description ?? ""),
         due: String(body.due ?? ""),
+        team: String(body.team ?? ""),
       },
       person(me.id, me.name, me.email, role),
       code,
@@ -104,6 +105,17 @@ export async function joinWorkspace(userId: string, rawCode: string) {
       throw Error("You were removed from this workspace. Ask the organizer.");
     if (!existing) {
       s.users.push(person(me.id, me.name, me.email, "student"));
+      // A student's group workspace has one team: joining the workspace joins it.
+      if (isGroup(s) && s.teams.length === 1) {
+        s.teams[0].memberIds.push(me.id);
+        s.events.unshift({
+          id: randomUUID(),
+          teamId: s.teams[0].id,
+          actorId: me.id,
+          body: "Joined the team",
+          at: new Date().toISOString(),
+        });
+      }
       s.version++;
       await tx`UPDATE teamtrack_state SET data=${tx.json(s)} WHERE id=${namespace}`;
     }

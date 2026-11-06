@@ -5,9 +5,9 @@ A deployed classroom MVP for student teamwork and professor oversight, with task
 ## Using it with a real class or group
 
 1. Open https://teamtrack-kappa.vercel.app, choose **Create account** (name, email, password of 8+ characters).
-2. **Create a workspace**: the class, project name and final due date. Pick "I'm a student" to set it up for your own group (you become its organizer), or "I'm the instructor" to see every team.
+2. **Create a workspace**: the class, project name and final due date. Pick "I'm a student" to set it up for your own group: it has exactly one team (you name it) and you become its organizer. Pick "I'm the instructor" for a class with several teams that you can all see.
 3. Press **Invite** (top right) and share the link or the 8-character code. People who open the link create an account and land in the workspace.
-4. Each student opens **My team** and joins a team or starts one. Instructors can also create teams and add or remove people under **Manage**.
+4. In a student's workspace everyone who joins lands on the team automatically. In an instructor's workspace each student opens **My team** and joins or starts a team; the instructor can also create teams and add or remove people under **Manage**.
 5. Add tasks with an owner and due date, post updates with evidence links, raise blockers, and accept the team agreement.
 
 One account can belong to several workspaces; switch from the avatar menu (top right) or the workspace card in the sidebar. There is no email service: a forgotten password is reset by the operator with `scripts/reset-password.ts` (see the operations guide). Canvas is optional; it works without it.

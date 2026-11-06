@@ -36,7 +36,7 @@ async function signup(name: string) {
   return { email, ...(await session(r.cookie!)) };
 }
 describe("own accounts", () => {
-  it("signs up, creates a workspace, invites a classmate who forms a team", async () => {
+  it("signs up, creates a group workspace, and an invited classmate lands on its team", async () => {
     const lead = await signup("Lead");
     expect(lead.data.state).toBeNull();
     const created = await call(lead, "/api/workspaces", {
@@ -44,6 +44,7 @@ describe("own accounts", () => {
       role: "student",
       course: "CSS 360",
       project: "Group app",
+      team: "Debuggers",
       due: "2030-01-15",
     });
     expect(created.status).toBe(200);
@@ -52,11 +53,7 @@ describe("own accounts", () => {
     expect(code).toMatch(/^[A-Z2-9]{8}$/);
     expect(l.data.state.users[0].owner).toBe(true);
 
-    const t = await call(l, "/api/workspace", {
-      type: "team.create",
-      name: "Debuggers",
-    });
-    expect(t.status).toBe(200);
+    expect(l.data.state.teams[0].name).toBe("Debuggers");
 
     const mate = await signup("Mate");
     const joined = await call(mate, "/api/workspaces", {
@@ -64,17 +61,12 @@ describe("own accounts", () => {
       code: code.slice(0, 4).toLowerCase() + "-" + code.slice(4),
     });
     expect(joined.status).toBe(200);
+    // Joining a student's workspace puts you straight on its one team.
     const m = await session(joined.cookie!);
-    expect(m.data.state.teams).toEqual([]);
-    expect(m.data.openTeams).toHaveLength(1);
-    const j = await call(m, "/api/workspace", {
-      type: "team.join",
-      teamId: m.data.openTeams[0].id,
-    });
-    expect(j.status).toBe(200);
-    expect(j.data.state.teams[0].memberIds).toHaveLength(2);
+    expect(m.data.state.teams[0].memberIds).toHaveLength(2);
+    expect(m.data.openTeams).toEqual([]);
     // Classmates don't see each other's emails.
-    const leadSeen = j.data.state.users.find((u: any) => u.owner);
+    const leadSeen = m.data.state.users.find((u: any) => u.owner);
     expect(leadSeen.email).toBeUndefined();
     expect(m.data.workspaces).toHaveLength(1);
   });

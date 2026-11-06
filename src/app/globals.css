@@ -5718,3 +5718,6 @@ button.course-switch:disabled {
     grid-column: 1 / -1;
   }
 }
+.join-team.single {
+  grid-template-columns: minmax(0, 640px);
+}

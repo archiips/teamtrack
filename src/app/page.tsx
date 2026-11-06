@@ -65,7 +65,7 @@ import {
   KeyRound,
 } from "lucide-react";
 import type { State, Task, User, Command } from "@/lib/types";
-import { attention } from "@/lib/domain";
+import { attention, isGroup } from "@/lib/domain";
 type View = "overview" | "tasks" | "team" | "agreement" | "activity";
 type OpenTeam = { id: string; name: string; size: number };
 const labels = { todo: "To do", in_progress: "In progress", done: "Done" };
@@ -349,6 +349,7 @@ export default function Page() {
   const me = s.users.find((u) => u.id === userId)!,
     prof = me.role === "instructor",
     organizer = prof || !!me.owner,
+    group = isGroup(s),
     noTeam = !prof && !s.teams.some((t) => t.memberIds.includes(userId)),
     unassigned = s.users.filter(
       (u) =>
@@ -942,7 +943,7 @@ export default function Page() {
               <div>
                 <strong>{s.project}</strong>
                 <span>
-                  Team project <span className="dot">·</span> Due {date(s.due)}
+                  Project <span className="dot">·</span> Due {date(s.due)}
                 </span>
               </div>
             </div>
@@ -1425,92 +1426,100 @@ export default function Page() {
               </section>
             )}
             {view === "team" && noTeam && (
-              <div className="join-team">
-                <section className="panel">
-                  <div className="panel-title">
-                    <div>
-                      <h2>Join your team</h2>
-                      <p>
-                        {openTeams.length
-                          ? "Pick the team you’re working with."
-                          : "No teams yet. Start one and your teammates can join it."}
-                      </p>
-                    </div>
-                    <Users size={21} />
-                  </div>
-                  {openTeams.map((t) => (
-                    <div className="member-row" key={t.id}>
-                      <span className="team-emblem small">
-                        <Compass size={16} />
-                      </span>
+              <div className={`join-team ${group ? "single" : ""}`}>
+                {/* A group workspace has one team: join it, or name it if nobody has yet. */}
+                {(!group || openTeams.length > 0) && (
+                  <section className="panel">
+                    <div className="panel-title">
                       <div>
-                        <strong>{t.name}</strong>
-                        <span>
-                          {t.size} member{t.size === 1 ? "" : "s"}
-                        </span>
+                        <h2>Join your team</h2>
+                        <p>
+                          {group
+                            ? "This workspace is for one team. Join it to see its tasks and agreement."
+                            : openTeams.length
+                              ? "Pick the team you’re working with."
+                              : "No teams yet. Start one and your teammates can join it."}
+                        </p>
                       </div>
-                      <button
-                        className="secondary"
-                        disabled={busy}
-                        onClick={async () => {
-                          if (
-                            await command(
-                              { type: "team.join", teamId: t.id },
-                              `Welcome to ${t.name}`,
-                            )
-                          ) {
-                            await refresh();
-                            setView("overview");
-                          }
-                        }}
-                      >
-                        Join
+                      <Users size={21} />
+                    </div>
+                    {openTeams.map((t) => (
+                      <div className="member-row" key={t.id}>
+                        <span className="team-emblem small">
+                          <Compass size={16} />
+                        </span>
+                        <div>
+                          <strong>{t.name}</strong>
+                          <span>
+                            {t.size} member{t.size === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                        <button
+                          className="secondary"
+                          disabled={busy}
+                          onClick={async () => {
+                            if (
+                              await command(
+                                { type: "team.join", teamId: t.id },
+                                `Welcome to ${t.name}`,
+                              )
+                            ) {
+                              await refresh();
+                              setView("overview");
+                            }
+                          }}
+                        >
+                          Join
+                        </button>
+                      </div>
+                    ))}
+                  </section>
+                )}
+                {(!group || !openTeams.length) && (
+                  <section className="panel">
+                    <div className="panel-title">
+                      <div>
+                        <h2>{group ? "Name your team" : "Start a new team"}</h2>
+                        <p>
+                          {group
+                            ? "Everyone you invite joins this team automatically."
+                            : "You’ll be its first member. Share the invite code so others can join."}
+                        </p>
+                      </div>
+                      <Plus size={21} />
+                    </div>
+                    <form
+                      className="inline-form"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        const f = new FormData(e.currentTarget);
+                        if (
+                          await command(
+                            { type: "team.create", name: f.get("name") },
+                            "Team started",
+                          )
+                        ) {
+                          await refresh();
+                          setView("overview");
+                        }
+                      }}
+                    >
+                      <label>
+                        Team name
+                        <input
+                          name="name"
+                          required
+                          maxLength={120}
+                          placeholder="The Debuggers"
+                        />
+                      </label>
+                      <button className="primary" disabled={busy}>
+                        Start team
+                        <ArrowRight size={16} />
                       </button>
-                    </div>
-                  ))}
-                </section>
-                <section className="panel">
-                  <div className="panel-title">
-                    <div>
-                      <h2>Start a new team</h2>
-                      <p>
-                        You’ll be its first member. Share the invite code so
-                        others can join.
-                      </p>
-                    </div>
-                    <Plus size={21} />
-                  </div>
-                  <form
-                    className="inline-form"
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const f = new FormData(e.currentTarget);
-                      if (
-                        await command(
-                          { type: "team.create", name: f.get("name") },
-                          "Team started",
-                        )
-                      ) {
-                        await refresh();
-                        setView("overview");
-                      }
-                    }}
-                  >
-                    <label>
-                      Team name
-                      <input
-                        name="name"
-                        required
-                        maxLength={120}
-                        placeholder="The Debuggers"
-                      />
-                    </label>
-                    <button className="primary" disabled={busy}>
-                      Start team
-                      <ArrowRight size={16} />
-                    </button>
-                  </form>
-                </section>
+                    </form>
+                  </section>
+                )}
               </div>
             )}
             {view === "team" && prof && !s.teams.length && (
@@ -2218,6 +2227,7 @@ export default function Page() {
         <InviteModal
           code={s.inviteCode}
           canRotate={organizer}
+          group={group}
           busy={busy}
           onRotate={() =>
             command({ type: "invite.rotate" }, "New invite code ready")
@@ -2386,12 +2396,14 @@ function CheckpointTrack({
 }
 function InviteModal({
   code,
+  group,
   canRotate,
   busy,
   onRotate,
   onClose,
 }: {
   code: string;
+  group: boolean;
   canRotate: boolean;
   busy: boolean;
   onRotate: () => Promise<boolean>;
@@ -2411,7 +2423,11 @@ function InviteModal({
   return (
     <Modal
       title="Invite people"
-      subtitle="Anyone with this code or link joins as a student, then picks or starts their team."
+      subtitle={
+        group
+          ? "Anyone with this code or link joins your team straight away."
+          : "Anyone with this code or link joins as a student, then picks or starts their team."
+      }
       onClose={onClose}
     >
       <div className="invite-code" aria-label="Invite code">
