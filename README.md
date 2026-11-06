@@ -4,6 +4,8 @@ A deployed classroom MVP for student teamwork and professor oversight, with task
 
 ## Using it with a real class or group
 
+New users can open an optional **practice workspace** first (setup screen, avatar menu, or the tip on Overview): sample teammates and a short checklist of hands-on steps, as a student or an instructor. Nothing there is shared.
+
 1. Open https://teamtrack-kappa.vercel.app, choose **Create account** (name, email, password of 8+ characters).
 2. **Create a workspace**: the class, project name and final due date. Pick "I'm a student" to set it up for your own group: it has exactly one team (you name it) and you become its organizer. Pick "I'm the instructor" for a class with several teams that you can all see.
 3. Press **Invite** (top right) and share the link or the 8-character code. People who open the link create an account and land in the workspace.

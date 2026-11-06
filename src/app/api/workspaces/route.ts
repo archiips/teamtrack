@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { sameOrigin, session, signIn } from "@/lib/auth";
-import { createWorkspace, isMember, joinWorkspace } from "@/lib/workspaces";
+import {
+  createWorkspace,
+  isMember,
+  joinWorkspace,
+  practiceWorkspace,
+} from "@/lib/workspaces";
 export const dynamic = "force-dynamic";
 /** Create, join or switch workspaces; each re-issues the session for the chosen one. */
 export async function POST(req: Request) {
@@ -23,6 +28,8 @@ export async function POST(req: Request) {
       namespace = await createWorkspace(a.userId, body);
     else if (body.action === "join")
       namespace = await joinWorkspace(a.userId, String(body.code ?? ""));
+    else if (body.action === "practice")
+      namespace = await practiceWorkspace(a.userId, body.role);
     else if (body.action === "switch") {
       namespace = String(body.namespace ?? "");
       if (!(await isMember(a.userId, namespace)))

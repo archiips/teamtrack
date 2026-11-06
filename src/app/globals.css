@@ -5890,3 +5890,181 @@ button.course-switch:disabled {
 .team-grid {
   align-items: start;
 }
+/* Practice workspace: checklist and the tip that offers it. */
+.practice-guide {
+  margin-bottom: 18px;
+  border: 1px dashed #8c52ff;
+  border-radius: 16px;
+  background: var(--c5);
+  box-shadow: var(--lift);
+  overflow: hidden;
+}
+.practice-head {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr minmax(80px, 160px) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: none;
+  text-align: left;
+  color: var(--c2);
+}
+.practice-head strong {
+  font-size: 13px;
+}
+.practice-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #8c52ff1f;
+  color: var(--c7);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.practice-meter {
+  height: 6px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #8c52ff var(--p), var(--c60) var(--p));
+}
+.practice-guide.closed .practice-head > svg {
+  transform: rotate(-90deg);
+}
+.practice-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0 18px;
+}
+.practice-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--c60);
+}
+.practice-steps li > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.practice-steps strong {
+  font-size: 12px;
+}
+.practice-steps small {
+  font-size: 11px;
+  color: var(--c44);
+}
+.practice-steps li.done strong {
+  color: var(--c44);
+  text-decoration: line-through;
+}
+.practice-steps li.next {
+  background: linear-gradient(90deg, #8c52ff10, transparent);
+}
+.practice-steps .secondary {
+  min-height: 32px;
+  padding: 6px 12px;
+}
+.practice-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid var(--c6);
+  color: var(--c44);
+}
+.practice-steps li.done .practice-check {
+  background: #8c52ff;
+  border-color: #8c52ff;
+  color: #ffffff;
+}
+.practice-steps li.next .practice-check {
+  border-color: #8c52ff;
+  color: var(--c7);
+}
+.practice-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid var(--c60);
+}
+.practice-foot .primary {
+  margin-left: 6px;
+}
+.practice-tip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--c6);
+  background: var(--c5);
+  font-size: 12px;
+  color: var(--c2);
+}
+.practice-tip > svg {
+  color: #8c52ff;
+  flex-shrink: 0;
+}
+.practice-tip > span {
+  flex: 1;
+}
+.onboard-practice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px dashed #8c52ff;
+  background: var(--c5);
+}
+.onboard-practice > span:nth-child(2) {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.onboard-practice strong {
+  font-size: 13px;
+}
+.onboard-practice small {
+  font-size: 11px;
+  color: var(--c44);
+}
+@media (max-width: 650px) {
+  .practice-head {
+    grid-template-columns: 1fr auto;
+  }
+  .practice-head strong {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .practice-meter {
+    display: none;
+  }
+  .practice-steps li {
+    grid-template-columns: auto 1fr;
+  }
+  .practice-steps .secondary {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .practice-tip {
+    flex-wrap: wrap;
+  }
+}

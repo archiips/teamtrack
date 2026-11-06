@@ -60,11 +60,16 @@ const isDemoEmail = (email: string) =>
 
 export type Login = { userId: string; namespace: string; account: boolean };
 
-/** The workspace a signed-in person lands in: their most recently joined one, or none. */
+/**
+ * The workspace a signed-in person lands in: their most recently joined real one
+ * (practice only when it's all they have), or none.
+ */
 export async function lastWorkspace(userId: string) {
   const db = await accountTables();
-  const rows =
-    await db`SELECT namespace FROM teamtrack_member WHERE user_id=${userId} ORDER BY joined_at DESC LIMIT 1`;
+  const rows = await db`
+    SELECT m.namespace FROM teamtrack_member m JOIN teamtrack_state s ON s.id = m.namespace
+    WHERE m.user_id=${userId}
+    ORDER BY (s.data->>'practice') = 'true' NULLS FIRST, m.joined_at DESC LIMIT 1`;
   return (rows[0]?.namespace as string) || "";
 }
 

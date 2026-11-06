@@ -20,6 +20,7 @@ export type WorkspaceSummary = {
   course: string;
   project: string;
   role: "instructor" | "student";
+  practice?: boolean;
 };
 
 async function post(url: string, body: unknown, csrf?: string) {
@@ -390,6 +391,38 @@ export function Onboarding({
             </form>
           </section>
         </div>
+        {!workspaces.some((w) => w.practice) && (
+          <section className="onboard-practice">
+            <span className="onboard-icon small">
+              <GraduationCap size={16} />
+            </span>
+            <span>
+              <strong>New here? Practice first.</strong>
+              <small>
+                A 3-minute hands-on tour with sample teammates. Nothing is
+                shared, and you can leave any time.
+              </small>
+            </span>
+            <button
+              className="secondary"
+              disabled={!!busy}
+              onClick={() =>
+                act("practice", { action: "practice", role: "student" })
+              }
+            >
+              {busy === "practice" ? "Opening…" : "As a student"}
+            </button>
+            <button
+              className="secondary"
+              disabled={!!busy}
+              onClick={() =>
+                act("practice", { action: "practice", role: "instructor" })
+              }
+            >
+              As an instructor
+            </button>
+          </section>
+        )}
         {workspaces.length > 0 && (
           <section className="onboard-list">
             <h2>Your workspaces</h2>
@@ -408,8 +441,9 @@ export function Onboarding({
                 <span>
                   <strong>{w.project}</strong>
                   <small>
-                    {w.course} ·{" "}
-                    {w.role === "instructor" ? "Instructor" : "Student"}
+                    {w.practice
+                      ? "Practice workspace"
+                      : `${w.course} · ${w.role === "instructor" ? "Instructor" : "Student"}`}
                   </small>
                 </span>
                 <ArrowRight size={16} />

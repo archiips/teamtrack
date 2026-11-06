@@ -63,6 +63,8 @@ export type State = {
   version: number;
   /** Code people use to join this workspace (own-account workspaces only). */
   inviteCode?: string;
+  /** A private practice workspace with sample people (see lib/practice.ts). */
+  practice?: boolean;
   course: string;
   project: string;
   description: string;

@@ -21,6 +21,7 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Folder } from "@/components/folder";
 import { GithubPanel, type GithubData } from "@/components/github-panel";
+import { PracticeGuide, type PracticeGo } from "@/components/practice-guide";
 import {
   AuthPanel,
   Onboarding,
@@ -123,6 +124,7 @@ export default function Page() {
     [ghEnabled, setGhEnabled] = useState(false),
     [ghData, setGhData] = useState<Record<string, GithubData>>({}),
     [ghTick, setGhTick] = useState(0),
+    [tipHidden, setTipHidden] = useState(false),
     [ghPick, setGhPick] = useState<{
       token: string;
       repos: { repo: string; private: boolean }[];
@@ -210,6 +212,35 @@ export default function Page() {
     setSelected(null);
     await refresh();
   }
+  async function startPractice(role: "student" | "instructor") {
+    setMenu(false);
+    setBusy(true);
+    setError("");
+    try {
+      const r = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-csrf-token": csrf },
+        body: JSON.stringify({ action: "practice", role }),
+      });
+      if (!r.ok) throw Error((await r.json()).error);
+      setAdding(false);
+      setView("overview");
+      setSelected(null);
+      setFilter("all");
+      await refresh();
+    } catch (e) {
+      setError(
+        (e as Error).message || "Could not open the practice workspace.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  function leavePractice() {
+    const real = workspaces.find((w) => !w.practice);
+    if (real) void switchTo(real.namespace);
+    else setAdding(true);
+  }
   function signOut() {
     void fetch("/api/auth/logout", { method: "POST" });
     setS(null);
@@ -255,6 +286,9 @@ export default function Page() {
           window.self !== window.top,
         );
         setDismissed(store("get") === "yes");
+        try {
+          setTipHidden(localStorage.getItem("tt-practice-tip") === "hidden");
+        } catch {}
       })
       .catch(() => setError("Cannot connect. Please retry."))
       .finally(() => setLoading(false));
@@ -275,6 +309,16 @@ export default function Page() {
       live = false;
     };
   }, [ghEnabled, linked, cheer, ghTick]);
+  // Practice: remember which views were visited, for the checklist.
+  useEffect(() => {
+    if (!s?.practice) return;
+    const seen = new Set(readSeen(namespace));
+    seen.add(view);
+    if (view === "tasks") seen.add(`tasks:${teamId}`);
+    try {
+      localStorage.setItem(`tt-seen-${namespace}`, JSON.stringify([...seen]));
+    } catch {}
+  }, [s?.practice, namespace, view, teamId]);
   // Menus close on a click elsewhere or Escape.
   useEffect(() => {
     if (!menu && !switcher) return;
@@ -404,6 +448,17 @@ export default function Page() {
     prof = me.role === "instructor",
     organizer = prof || !!me.owner,
     group = isGroup(s),
+    ghOn = ghEnabled && !s.practice,
+    // Practice: views visited so far (stored), plus the one open now.
+    practiceSeen = new Set(
+      s.practice
+        ? [
+            ...readSeen(namespace),
+            view,
+            view === "tasks" ? `tasks:${teamId}` : "",
+          ]
+        : [],
+    ),
     noTeam = !prof && !s.teams.some((t) => t.memberIds.includes(userId)),
     unassigned = s.users.filter(
       (u) =>
@@ -780,7 +835,12 @@ export default function Page() {
             <strong>{nav.find((n) => n.id === view)?.name}</strong>
           </div>
           <div className="top-actions">
-            {s.inviteCode ? (
+            {s.practice ? (
+              <span className="demo-badge">
+                <span />
+                Practice · not shared
+              </span>
+            ) : s.inviteCode ? (
               <button
                 className="secondary invite-button"
                 onClick={() => setInviteOpen(true)}
@@ -838,7 +898,7 @@ export default function Page() {
                           <GraduationCap size={15} />
                           <span>
                             {w.project}
-                            <small>{w.course}</small>
+                            <small>{w.practice ? "Practice" : w.course}</small>
                           </span>
                           {w.namespace === namespace && <Check size={14} />}
                         </button>
@@ -853,6 +913,18 @@ export default function Page() {
                         <Plus size={15} />
                         <span>Create or join another</span>
                       </button>
+                      {!workspaces.some((w) => w.practice) && (
+                        <button
+                          role="menuitem"
+                          onClick={() => startPractice("student")}
+                        >
+                          <GraduationCap size={15} />
+                          <span>
+                            Try the practice workspace
+                            <small>A hands-on tour with sample data</small>
+                          </span>
+                        </button>
+                      )}
                       <hr />
                       <button
                         role="menuitem"
@@ -985,6 +1057,59 @@ export default function Page() {
               </button>
             </div>
           )}
+          {s.practice && (
+            <PracticeGuide
+              key={namespace}
+              s={s}
+              userId={userId}
+              namespace={namespace}
+              seen={practiceSeen}
+              busy={busy}
+              onGo={(go: PracticeGo) => {
+                setSelected(null);
+                if (go.view === "brief") return setEditProject(true);
+                setView(go.view);
+                if ("filter" in go && go.filter) setFilter(go.filter);
+                else setFilter("all");
+                if ("teamId" in go && go.teamId) setTeamId(go.teamId);
+              }}
+              onRestart={startPractice}
+              onExit={leavePractice}
+            />
+          )}
+          {account &&
+            !s.practice &&
+            view === "overview" &&
+            !tipHidden &&
+            !workspaces.some((w) => w.practice) && (
+              <div className="practice-tip">
+                <GraduationCap size={18} />
+                <span>
+                  <strong>New to TeamTrack?</strong> Try a 3-minute practice
+                  workspace with sample teammates. Nothing you do there is
+                  shared.
+                </span>
+                <button
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => startPractice(prof ? "instructor" : "student")}
+                >
+                  Start practice
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Hide this tip"
+                  onClick={() => {
+                    setTipHidden(true);
+                    try {
+                      localStorage.setItem("tt-practice-tip", "hidden");
+                    } catch {}
+                  }}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            )}
           {prof && s.integration && (
             <div className="roster-status">
               <span>
@@ -1693,7 +1818,7 @@ export default function Page() {
                         Counts describe recorded activity. Review the work for
                         context.
                       </div>
-                      {prof && ghEnabled && (
+                      {prof && ghOn && (
                         <div className="github-line">
                           {t.github ? (
                             <>
@@ -1734,7 +1859,7 @@ export default function Page() {
                     </section>
                   </Folder>
                 ))}
-                {!prof && team && ghEnabled && (
+                {!prof && team && ghOn && (
                   <GithubPanel
                     team={team}
                     s={s}
@@ -2050,7 +2175,7 @@ export default function Page() {
               </div>
             )}
             {view === "activity" && (
-              <div className={ghEnabled && team ? "activity-grid" : ""}>
+              <div className={ghOn && team ? "activity-grid" : ""}>
                 <section className="panel activity-panel">
                   <div className="panel-title">
                     <div>
@@ -2089,7 +2214,7 @@ export default function Page() {
                     </div>
                   )}
                 </section>
-                {ghEnabled && team && (
+                {ghOn && team && (
                   <GithubPanel
                     team={team}
                     s={s}
@@ -2124,9 +2249,11 @@ export default function Page() {
               TeamTrack <span className="dot">·</span>{" "}
               {namespace === "demo"
                 ? "Class demo"
-                : s.inviteCode
-                  ? s.course
-                  : "Canvas course"}
+                : s.practice
+                  ? "Practice workspace"
+                  : s.inviteCode
+                    ? s.course
+                    : "Canvas course"}
             </span>
           </footer>
         </main>
@@ -3329,4 +3456,11 @@ function store(op: "get" | "set" | "remove") {
     else localStorage.removeItem(key);
   } catch {}
   return null;
+}
+function readSeen(namespace: string): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(`tt-seen-${namespace}`) || "[]");
+  } catch {
+    return [];
+  }
 }

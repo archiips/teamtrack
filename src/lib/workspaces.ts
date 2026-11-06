@@ -1,6 +1,7 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { accountById, accountTables } from "./accounts";
 import { blankState, isGroup, person } from "./domain";
+import { practiceState } from "./practice";
 import type { State } from "./types";
 
 // No 0/O or 1/I, so a code read aloud or copied by hand still works.
@@ -18,6 +19,7 @@ export type WorkspaceSummary = {
   course: string;
   project: string;
   role: "instructor" | "student";
+  practice?: boolean;
 };
 
 export async function listWorkspaces(
@@ -26,6 +28,7 @@ export async function listWorkspaces(
   const db = await accountTables();
   const rows = await db`
     SELECT m.namespace, s.data->>'course' AS course, s.data->>'project' AS project,
+      (s.data->>'practice') = 'true' AS practice,
       (SELECT u FROM jsonb_array_elements(s.data->'users') u WHERE u->>'id' = m.user_id) AS me
     FROM teamtrack_member m JOIN teamtrack_state s ON s.id = m.namespace
     WHERE m.user_id = ${userId} ORDER BY m.joined_at`;
@@ -36,6 +39,7 @@ export async function listWorkspaces(
       course: r.course,
       project: r.project,
       role: r.me.role === "instructor" ? "instructor" : "student",
+      practice: !!r.practice,
     }));
 }
 
@@ -137,4 +141,30 @@ export async function rotateInvite(namespace: string) {
     s.version++;
     await tx`UPDATE teamtrack_state SET data=${tx.json(s)} WHERE id=${namespace}`;
   });
+}
+
+/**
+ * The person's practice workspace, created fresh for the chosen role. One per person:
+ * starting again (or switching role) replaces the old one.
+ */
+export async function practiceWorkspace(userId: string, role: unknown) {
+  const me = await accountById(userId);
+  if (!me) throw Error("Please sign in");
+  const r = role === "instructor" ? "instructor" : "student";
+  const db = await accountTables();
+  const namespace = "w_" + randomUUID().replaceAll("-", "").slice(0, 16);
+  await db.begin(async (tx) => {
+    const old = await tx`
+      SELECT m.namespace FROM teamtrack_member m JOIN teamtrack_state s ON s.id = m.namespace
+      WHERE m.user_id = ${me.id} AND (s.data->>'practice') = 'true'`;
+    const ids = old.map((o) => o.namespace as string);
+    if (ids.length) {
+      await tx`DELETE FROM teamtrack_member WHERE namespace = ANY(${ids})`;
+      await tx`DELETE FROM teamtrack_state WHERE id = ANY(${ids})`;
+    }
+    const state = practiceState(person(me.id, me.name, me.email, r), r);
+    await tx`INSERT INTO teamtrack_state (id,data) VALUES (${namespace},${tx.json(state)})`;
+    await tx`INSERT INTO teamtrack_member (user_id,namespace) VALUES (${me.id},${namespace})`;
+  });
+  return namespace;
 }
