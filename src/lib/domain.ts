@@ -392,6 +392,28 @@ export function apply(original: State, actorId: string, c: Command): State {
     s.checkpoints ??= [];
     s.checkpoints.push({ id: crypto.randomUUID(), title, due: c.due });
     event(s.teams[0]?.id || "", `Created checkpoint “${title}”`);
+  } else if (c.type === "checkpoint.update") {
+    organizer();
+    const cp = s.checkpoints?.find((x) => x.id === c.id);
+    if (!cp) throw Error("That checkpoint no longer exists");
+    const title = text(c.title, 120);
+    if (s.checkpoints!.some((x) => x.id !== cp.id && x.title === title))
+      throw Error("Checkpoint already exists");
+    // Tasks name their checkpoint, so a rename carries over to them.
+    for (const t of s.tasks)
+      if (t.checkpoint === cp.title) t.checkpoint = title;
+    cp.title = title;
+    cp.due = dateOnly(c.due);
+    event(s.teams[0]?.id || "", `Updated checkpoint “${title}”`);
+  } else if (c.type === "checkpoint.delete") {
+    organizer();
+    const cp = s.checkpoints?.find((x) => x.id === c.id);
+    if (!cp) throw Error("That checkpoint no longer exists");
+    if (s.checkpoints!.length === 1)
+      throw Error("Keep at least one checkpoint");
+    // Tasks keep their label; it just no longer appears on the track.
+    s.checkpoints = s.checkpoints!.filter((x) => x.id !== cp.id);
+    event(s.teams[0]?.id || "", `Removed checkpoint “${cp.title}”`);
   } else if (c.type === "project.update") {
     organizer();
     s.project = text(c.title, 120);

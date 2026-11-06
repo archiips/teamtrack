@@ -123,3 +123,53 @@ describe("instructor team management", () => {
     expect(s.entries.some((e) => e.taskId === "k1")).toBe(false);
   });
 });
+describe("checkpoints", () => {
+  it("lets the organizer rename, re-date and delete checkpoints", () => {
+    let s = apply(fresh(), "u_a", { type: "team.create", name: "Debuggers" });
+    const [plan, build] = s.checkpoints!;
+    s = apply(s, "u_a", {
+      type: "task.create",
+      teamId: s.teams[0].id,
+      title: "Outline",
+      ownerId: "u_a",
+      due: "2030-01-01",
+      checkpoint: "Plan",
+    });
+    s = apply(s, "u_a", {
+      type: "checkpoint.update",
+      id: plan.id,
+      title: "Proposal",
+      due: "2029-12-01",
+    });
+    expect(s.checkpoints![0]).toMatchObject({
+      title: "Proposal",
+      due: "2029-12-01",
+    });
+    expect(s.tasks[0].checkpoint).toBe("Proposal");
+    expect(() =>
+      apply(s, "u_a", {
+        type: "checkpoint.update",
+        id: plan.id,
+        title: "Build",
+        due: "2029-12-01",
+      }),
+    ).toThrow("already exists");
+    expect(() =>
+      apply(s, "u_b", { type: "checkpoint.delete", id: build.id }),
+    ).toThrow("organizer");
+    s = apply(s, "u_a", { type: "checkpoint.delete", id: build.id });
+    expect(s.checkpoints!.map((c) => c.title)).toEqual([
+      "Proposal",
+      "Review",
+      "Final",
+    ]);
+  });
+  it("keeps at least one checkpoint", () => {
+    let s = fresh();
+    for (const c of s.checkpoints!.slice(1))
+      s = apply(s, "u_a", { type: "checkpoint.delete", id: c.id });
+    expect(() =>
+      apply(s, "u_a", { type: "checkpoint.delete", id: s.checkpoints![0].id }),
+    ).toThrow("at least one");
+  });
+});

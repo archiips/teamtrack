@@ -5465,7 +5465,7 @@ button.course-switch:disabled {
   font-size: 11px;
   color: var(--c44);
   margin: 4px 0 14px;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 .empty-actions {
   display: flex;
@@ -5692,4 +5692,29 @@ button.course-switch:disabled {
 /* Open menus sit above the page heading, which has its own stacking context. */
 .workspace > .topbar {
   z-index: 30;
+}
+/* Editable checkpoints in the project brief dialog. */
+.checkpoint-editor form.checkpoint-row {
+  display: grid;
+  grid-template-columns: 1fr 150px auto auto;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--c6);
+}
+.checkpoint-row input {
+  padding: 8px 10px;
+}
+.checkpoint-row .secondary {
+  min-height: 34px;
+  padding: 6px 12px;
+}
+@media (max-width: 520px) {
+  .checkpoint-editor form.checkpoint-row {
+    grid-template-columns: 1fr auto auto;
+  }
+  .checkpoint-row input[name="title"] {
+    grid-column: 1 / -1;
+  }
 }

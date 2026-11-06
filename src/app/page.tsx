@@ -2115,12 +2115,65 @@ export default function Page() {
           </form>
           <div className="checkpoint-editor">
             <h3>Project checkpoints</h3>
-            {s.checkpoints?.map((cp) => (
-              <p key={cp.id}>
-                {cp.title}
-                <span>{date(cp.due)}</span>
-              </p>
-            ))}
+            <p className="form-note">
+              Set these to your class’s real milestones. Renaming one updates
+              the tasks filed under it.
+            </p>
+            {[...(s.checkpoints || [])]
+              .sort((a, b) => a.due.localeCompare(b.due))
+              .map((cp) => (
+                <form
+                  key={`${cp.id}-${cp.title}-${cp.due}`}
+                  className="checkpoint-row"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    await command(
+                      {
+                        type: "checkpoint.update",
+                        id: cp.id,
+                        title: f.get("title"),
+                        due: f.get("due"),
+                      },
+                      "Checkpoint updated",
+                    );
+                  }}
+                >
+                  <input
+                    name="title"
+                    aria-label="Checkpoint name"
+                    defaultValue={cp.title}
+                    required
+                    maxLength={120}
+                  />
+                  <input
+                    name="due"
+                    type="date"
+                    aria-label={`${cp.title} date`}
+                    defaultValue={cp.due}
+                    required
+                  />
+                  <button className="secondary" disabled={busy}>
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-button danger"
+                    aria-label={`Delete ${cp.title}`}
+                    title="Delete checkpoint"
+                    disabled={busy || (s.checkpoints?.length ?? 0) < 2}
+                    onClick={() =>
+                      confirm(`Delete the “${cp.title}” checkpoint?`) &&
+                      command(
+                        { type: "checkpoint.delete", id: cp.id },
+                        "Checkpoint deleted",
+                      )
+                    }
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </form>
+              ))}
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
