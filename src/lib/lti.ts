@@ -325,8 +325,9 @@ export async function integrationStatus(namespace: string) {
   if (!sql) throw Error("Database required");
   const rows =
     await sql`SELECT last_sync,error FROM teamtrack_course WHERE namespace=${namespace}`;
-  // The demo workspace only shows an integration once the demo LMS has launched it.
-  if (!rows[0] && namespace === "demo") return undefined;
+  // Only LMS-launched workspaces have an integration: the demo once the demo LMS
+  // has launched it, Canvas courses always, own-account workspaces never.
+  if (!rows[0] && !namespace.startsWith("canvas-")) return undefined;
   return {
     lastSync: rows[0]?.last_sync
       ? new Date(rows[0].last_sync).toISOString()

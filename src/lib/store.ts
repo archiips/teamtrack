@@ -5,7 +5,10 @@ import { State, Command } from "./types";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 export const sql = process.env.DATABASE_URL
   ? postgres(process.env.DATABASE_URL, {
-      ssl: "require",
+      // A local Postgres (development and tests) has no TLS.
+      ssl: /@(localhost|127\.0\.0\.1)[:/]/.test(process.env.DATABASE_URL)
+        ? false
+        : "require",
       max: 3,
       prepare: false,
       onnotice: () => {},

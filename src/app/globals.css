@@ -5178,3 +5178,518 @@ nav button.active {
     display: none;
   }
 }
+/* Own accounts: sign-up tabs, onboarding, invites, team self-service. */
+.auth-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-top: 26px;
+  border: 1px solid var(--c6);
+  border-radius: 10px;
+  background: var(--c5);
+  align-self: flex-start;
+}
+.auth-tabs button {
+  background: none;
+  padding: 8px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--c44);
+}
+.auth-tabs button.selected {
+  background: #35206f;
+  color: #ffffff;
+}
+.welcome-login .signin {
+  margin-top: 18px;
+}
+.invite-badge > span {
+  background: #8c52ff;
+}
+.onboard {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 60% 45% at 100% 0%, #edbcfa55, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, #e7e3fe55, transparent 70%),
+    var(--c1);
+  color: var(--c2);
+  padding: 28px clamp(16px, 4vw, 48px) 60px;
+}
+.onboard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.onboard-top .brand {
+  color: var(--c2);
+}
+.onboard-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.onboard-body {
+  max-width: 1080px;
+  margin: 48px auto 0;
+}
+.onboard-body h1 {
+  font-size: clamp(30px, 4vw, 46px);
+  letter-spacing: -1.6px;
+  line-height: 1.1;
+  margin: 10px 0 14px;
+}
+.onboard-lede {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--c44);
+  max-width: 620px;
+  margin-bottom: 30px;
+}
+.onboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 22px;
+  align-items: start;
+}
+.onboard-card {
+  padding: 26px;
+}
+.onboard-card h2 {
+  font-size: 19px;
+  letter-spacing: -0.5px;
+  margin-top: 16px;
+}
+.onboard-card > p {
+  font-size: 12px;
+  color: var(--c44);
+  margin: 6px 0 20px;
+}
+.onboard-card .primary {
+  width: 100%;
+}
+.onboard-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #8c52ff1f;
+  color: #8c52ff;
+  flex-shrink: 0;
+}
+.onboard-icon.small {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+.code-input {
+  font-size: 20px !important;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  font-weight: 700;
+  text-align: center;
+}
+.role-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.role-pick button {
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--c6);
+  background: var(--c5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.role-pick button strong {
+  font-size: 12px;
+}
+.role-pick button small {
+  font-size: 10px;
+  color: var(--c44);
+}
+.role-pick button.selected {
+  border-color: #8c52ff;
+  box-shadow: 0 0 0 3px #8c52ff26;
+}
+label small {
+  color: var(--c44);
+}
+.onboard-list {
+  margin-top: 34px;
+}
+.onboard-list h2 {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+.workspace-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  border: 1px solid var(--c6);
+  background: var(--c5);
+}
+.workspace-row:hover {
+  border-color: #8c52ff;
+}
+.workspace-row > span:nth-child(2) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.workspace-row strong {
+  font-size: 13px;
+}
+.workspace-row small {
+  font-size: 11px;
+  color: var(--c44);
+}
+/* Sidebar workspace switcher. */
+.course-switch-wrap {
+  position: relative;
+}
+button.course-switch {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+button.course-switch:not(:disabled):hover {
+  background: #ffffff10;
+}
+button.course-switch:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.course-switch > svg:last-child {
+  color: #c5bee7;
+}
+.course-switch strong,
+.course-switch small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+.switcher {
+  position: absolute;
+  top: calc(100% - 22px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--c5);
+  color: var(--c2);
+  border: 1px solid var(--c6);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 16px 40px #1f124740;
+}
+.switcher button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  text-align: left;
+  gap: 2px 8px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: none;
+}
+.switcher button:hover,
+.switcher button.current {
+  background: var(--c47);
+}
+.switcher strong {
+  font-size: 12px;
+}
+.switcher small {
+  font-size: 10px;
+  color: var(--c44);
+  grid-column: 1;
+}
+.switcher button > svg {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  align-self: center;
+  color: #8c52ff;
+}
+.switcher .switcher-add {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-top: 1px solid var(--c6);
+  border-radius: 0 0 7px 7px;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--c7);
+}
+.invite-button {
+  min-height: 32px;
+  padding: 6px 12px;
+}
+.invite-code {
+  font-size: clamp(30px, 8vw, 42px);
+  font-weight: 800;
+  letter-spacing: 6px;
+  text-align: center;
+  padding: 22px 10px;
+  border: 1px dashed #8c52ff;
+  border-radius: 14px;
+  background: #8c52ff12;
+  color: var(--c7);
+  font-variant-numeric: tabular-nums;
+}
+.invite-actions {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 10px;
+  flex-wrap: wrap;
+}
+.invite-actions > * {
+  flex: 1;
+}
+.form-note {
+  font-size: 11px;
+  color: var(--c44);
+  margin: 4px 0 14px;
+  word-break: break-all;
+}
+.empty-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+.join-team {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+  align-items: start;
+}
+.inline-form {
+  padding: 0 23px 23px;
+}
+.team-emblem.small {
+  width: 32px;
+  height: 32px;
+}
+.unassigned {
+  margin-bottom: 22px;
+}
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 23px 23px;
+}
+.person-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--c6);
+  font-size: 11px;
+}
+.modal-section {
+  font-size: 13px;
+  margin: 24px 0 10px;
+}
+.manage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--c6);
+  font-size: 12px;
+}
+.manage-row > span:nth-child(2) {
+  flex: 1;
+}
+.danger {
+  color: var(--c109) !important;
+}
+.modal-actions.split {
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+@media (max-width: 900px) {
+  .onboard-grid,
+  .join-team {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .role-pick {
+    grid-template-columns: 1fr;
+  }
+  .onboard-actions .secondary {
+    padding: 8px 10px;
+  }
+}
+/* Account menu (top right) and phone navigation. */
+.account-wrap {
+  position: relative;
+}
+.account-button {
+  background: none;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+}
+.account-button:focus-visible {
+  outline: 2px solid #8c52ff;
+  outline-offset: 2px;
+}
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 45;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+  background: var(--c5);
+  color: var(--c2);
+  border: 1px solid var(--c6);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 18px 50px #1f124740;
+}
+.account-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px solid var(--c6);
+  margin-bottom: 4px;
+}
+.account-head div {
+  min-width: 0;
+}
+.account-head strong {
+  font-size: 13px;
+  display: block;
+}
+.account-head small {
+  font-size: 11px;
+  color: var(--c44);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.menu-label {
+  display: block;
+  font-size: 10px;
+  color: var(--c44);
+  padding: 8px 10px 4px;
+}
+.account-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: none;
+  font-size: 12px;
+  color: var(--c2);
+}
+.account-menu button > span {
+  flex: 1;
+  min-width: 0;
+}
+.account-menu button small {
+  display: block;
+  font-size: 10px;
+  color: var(--c44);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-menu button:hover,
+.account-menu button.current {
+  background: var(--c47);
+}
+.account-menu button > svg {
+  flex-shrink: 0;
+  color: var(--c7);
+}
+.account-menu hr {
+  border: 0;
+  border-top: 1px solid var(--c6);
+  margin: 4px 0;
+}
+.nav-short {
+  display: none;
+}
+@media (max-width: 650px) {
+  /* The sidebar becomes a bottom tab bar; workspace and account live in the avatar menu. */
+  .sidebar {
+    inset: auto 0 0 0;
+    width: auto;
+    height: calc(62px + env(safe-area-inset-bottom));
+    padding: 0 4px env(safe-area-inset-bottom);
+    flex-direction: row;
+    z-index: 35;
+    border-radius: 0;
+  }
+  .sidebar .brand,
+  .course-switch-wrap,
+  .nav-label,
+  .sidebar-bottom {
+    display: none;
+  }
+  .sidebar nav {
+    flex-direction: row;
+    flex: 1;
+    margin: 0;
+    gap: 2px;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .sidebar nav button {
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0;
+    padding: 8px 2px;
+    min-width: 0;
+    width: auto;
+    border-radius: 10px;
+  }
+  .sidebar nav .nav-short {
+    display: block;
+    font-size: 10px;
+    line-height: 1;
+  }
+  .workspace {
+    margin-left: 0;
+    padding-bottom: 72px;
+  }
+  .companion-wrap {
+    bottom: 76px !important;
+  }
+  .toast {
+    bottom: 78px;
+  }
+}
+/* Open menus sit above the page heading, which has its own stacking context. */
+.workspace > .topbar {
+  z-index: 30;
+}

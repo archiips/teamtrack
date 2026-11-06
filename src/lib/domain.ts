@@ -1,5 +1,5 @@
 import { today } from "./dates";
-import { State, Command, Task } from "./types";
+import { State, Command, Task, User } from "./types";
 const text = (v: unknown, max = 4000) => {
   if (typeof v !== "string" || !v.trim() || v.length > max)
     throw Error("Please enter valid text");
@@ -19,13 +19,92 @@ export function visible(s: State, userId: string): State {
     tasks,
     entries: s.entries.filter((e) => ks.has(e.taskId)),
     events: s.events.filter((e) => ids.has(e.teamId)),
-    users: s.users.filter(
-      (x) =>
-        x.id === userId ||
-        teams.some((t) => t.memberIds.includes(x.id)) ||
-        x.role === "instructor",
-    ),
+    users: s.users
+      .filter(
+        (x) =>
+          x.id === userId ||
+          teams.some((t) => t.memberIds.includes(x.id)) ||
+          x.role === "instructor",
+      )
+      .map((x) => (x.id === userId ? x : { ...x, email: undefined })),
   };
+}
+/** Teams a student without a team can join: names and sizes only. */
+export function openTeams(s: State, userId: string) {
+  const u = s.users.find((x) => x.id === userId);
+  if (
+    !u ||
+    u.role !== "student" ||
+    s.teams.some((t) => t.memberIds.includes(userId))
+  )
+    return [];
+  return s.teams.map((t) => ({
+    id: t.id,
+    name: t.name,
+    size: t.memberIds.length,
+  }));
+}
+const colors = ["blue", "purple", "green", "orange"];
+/** A workspace member built from an account. */
+export function person(
+  id: string,
+  name: string,
+  email: string,
+  role: User["role"],
+): User {
+  const initials =
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((x) => x[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?";
+  const color = colors[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % 4];
+  return { id, name, email, role, initials, color, active: true };
+}
+/** A new, empty workspace whose only member is its creator. */
+export function blankState(
+  b: { course: string; project: string; description: string; due: string },
+  creator: User,
+  inviteCode: string,
+): State {
+  const course = text(b.course, 120),
+    project = text(b.project, 120),
+    due = dateOnly(b.due);
+  const start = new Date(today() + "T12:00:00Z").getTime(),
+    end = new Date(due + "T12:00:00Z").getTime(),
+    step = Math.max(0, end - start) / 4;
+  return {
+    version: 1,
+    inviteCode,
+    course,
+    project,
+    description:
+      typeof b.description === "string" && b.description.trim()
+        ? b.description.trim().slice(0, 4000)
+        : "Agree on the plan, split up the work and keep each other posted.",
+    due,
+    checkpoints: ["Plan", "Build", "Review", "Final"].map((title, i) => ({
+      id: crypto.randomUUID(),
+      title,
+      due: new Date(start + step * (i + 1)).toISOString().slice(0, 10),
+    })),
+    users: [{ ...creator, owner: true }],
+    teams: [],
+    tasks: [],
+    entries: [],
+    events: [],
+  };
+}
+function dateOnly(v: unknown) {
+  if (
+    typeof v !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(v) ||
+    !Number.isFinite(Date.parse(v))
+  )
+    throw Error("Choose a due date");
+  return v;
 }
 export function attention(s: State, teamId: string) {
   const t = s.teams.find((x) => x.id === teamId)!;
@@ -47,6 +126,22 @@ export function apply(original: State, actorId: string, c: Command): State {
   if (!u || u.active === false) throw Error("Access denied");
   const instructor = () => {
     if (u.role !== "instructor") throw Error("Instructor access required");
+  };
+  // The brief and checkpoints: the instructor, or the student who set the workspace up.
+  const organizer = () => {
+    if (u.role !== "instructor" && !u.owner)
+      throw Error("Only the workspace organizer can change this");
+  };
+  const teamOf = (id: string) => s.teams.find((t) => t.memberIds.includes(id));
+  const removeMember = (t: State["teams"][number], id: string, why: string) => {
+    if (
+      s.tasks.some(
+        (x) => x.teamId === t.id && x.ownerId === id && x.status !== "done",
+      )
+    )
+      throw Error(why);
+    t.memberIds = t.memberIds.filter((m) => m !== id);
+    t.accepted = t.accepted.filter((m) => m !== id);
   };
   const access = (id: unknown) => {
     const t = s.teams.find((x) => x.id === id);
@@ -195,13 +290,75 @@ export function apply(original: State, actorId: string, c: Command): State {
     t.agreementVersion++;
     t.accepted = [];
     event(t.id, `Published team agreement version ${t.agreementVersion}`);
+  } else if (c.type === "task.delete") {
+    const t = s.tasks.find((x) => x.id === c.id);
+    if (!t) throw Error("Access denied");
+    access(t.teamId);
+    if (t.version !== c.version)
+      throw Error("This task changed. Reload and try again.");
+    s.tasks = s.tasks.filter((x) => x.id !== t.id);
+    s.entries = s.entries.filter((e) => e.taskId !== t.id);
+    event(t.teamId, `Deleted “${t.title}”`);
+  } else if (c.type === "team.create" && u.role === "student") {
+    // Students form their own team and become its first member.
+    if (teamOf(actorId)) throw Error("You’re already on a team");
+    const t = {
+      id: crypto.randomUUID(),
+      name: text(c.name, 120),
+      memberIds: [actorId],
+      agreement:
+        "We meet once a week and reply in our group chat within a day.\nEvery task has one owner and a due date.\nIf something is in the way, we raise a blocker early.",
+      agreementVersion: 1,
+      accepted: [],
+    };
+    s.teams.push(t);
+    event(t.id, `Started team “${t.name}”`);
+  } else if (c.type === "team.join") {
+    if (u.role !== "student") throw Error("Only students join teams");
+    if (teamOf(actorId)) throw Error("You’re already on a team");
+    const t = s.teams.find((x) => x.id === c.teamId);
+    if (!t) throw Error("That team no longer exists");
+    t.memberIds.push(actorId);
+    event(t.id, `Joined the team`);
+  } else if (c.type === "team.leave") {
+    const t = access(c.teamId);
+    if (!t.memberIds.includes(actorId)) throw Error("You’re not on this team");
+    removeMember(
+      t,
+      actorId,
+      "Hand off your open tasks before leaving the team",
+    );
+    event(t.id, `Left the team`);
+  } else if (c.type === "team.update") {
+    const t = access(c.teamId);
+    if (c.name !== undefined) {
+      t.name = text(c.name, 120);
+      event(t.id, `Renamed the team “${t.name}”`);
+    }
+    if (c.add !== undefined || c.remove !== undefined) instructor();
+    if (Array.isArray(c.add))
+      for (const id of new Set(c.add.map(String))) {
+        const m = s.users.find(
+          (x) => x.id === id && x.role === "student" && x.active !== false,
+        );
+        if (!m || teamOf(id))
+          throw Error("Choose unassigned enrolled students");
+        t.memberIds.push(id);
+        event(t.id, `Added ${m.name} to the team`);
+      }
+    if (typeof c.remove === "string") {
+      const m = s.users.find((x) => x.id === c.remove);
+      if (!m || !t.memberIds.includes(m.id))
+        throw Error("They’re not on this team");
+      removeMember(t, m.id, `Reassign ${m.name}’s open tasks first`);
+      event(t.id, `Removed ${m.name} from the team`);
+    }
   } else if (c.type === "team.create") {
     instructor();
     const memberIds = Array.isArray(c.memberIds)
       ? [...new Set(c.memberIds.map(String))]
       : [];
     if (
-      !memberIds.length ||
       memberIds.some(
         (id) =>
           !s.users.some(
@@ -222,7 +379,7 @@ export function apply(original: State, actorId: string, c: Command): State {
     s.teams.push(t);
     event(t.id, `Created team “${t.name}”`);
   } else if (c.type === "checkpoint.create") {
-    instructor();
+    organizer();
     const title = text(c.title, 120);
     if (s.checkpoints?.some((x) => x.title === title))
       throw Error("Checkpoint already exists");
@@ -236,9 +393,11 @@ export function apply(original: State, actorId: string, c: Command): State {
     s.checkpoints.push({ id: crypto.randomUUID(), title, due: c.due });
     event(s.teams[0]?.id || "", `Created checkpoint “${title}”`);
   } else if (c.type === "project.update") {
-    instructor();
+    organizer();
     s.project = text(c.title, 120);
     s.description = text(c.description);
+    if (c.course !== undefined) s.course = text(c.course, 120);
+    if (c.due !== undefined) s.due = dateOnly(c.due);
     event(s.teams[0]?.id || "", `Updated project brief`);
   } else throw Error("Unknown action");
   s.version++;

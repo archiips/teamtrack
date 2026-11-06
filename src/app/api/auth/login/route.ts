@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSession, sameOrigin } from "@/lib/auth";
+import { sameOrigin, signIn } from "@/lib/auth";
 import { verifyLogin } from "@/lib/accounts";
 export async function POST(req: Request) {
   try {
     sameOrigin(req);
-    if (process.env.DEMO_MODE === "false")
-      return NextResponse.json(
-        { error: "Demo sign-in is disabled" },
-        { status: 403 },
-      );
     const { email, password } = await req.json();
     const account = await verifyLogin(
       String(email ?? ""),
@@ -16,19 +11,15 @@ export async function POST(req: Request) {
     );
     if (!account)
       return NextResponse.json(
-        { error: "That email and password don't match a demo account." },
+        { error: "That email and password don't match an account." },
         { status: 401 },
       );
-    const { token } = await createSession(account.userId, account.namespace);
-    const res = NextResponse.json({ ok: true });
-    res.cookies.set("tt_session", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 28800,
-      path: "/",
-    });
-    return res;
+    return signIn(
+      NextResponse.json({ ok: true }),
+      account.userId,
+      account.namespace,
+      account.account,
+    );
   } catch {
     return NextResponse.json(
       { error: "Could not sign in. Please retry." },

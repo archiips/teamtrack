@@ -1,6 +1,6 @@
 "use client";
 import { today } from "@/lib/dates";
-import { useEffect, useState, useRef } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
@@ -15,6 +15,12 @@ import { Doodles } from "@/components/doodles";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Folder } from "@/components/folder";
+import {
+  AuthPanel,
+  Onboarding,
+  type Account,
+  type WorkspaceSummary,
+} from "@/components/onboarding";
 import {
   CountUp,
   Ring,
@@ -51,10 +57,17 @@ import {
   CalendarDays,
   AlertCircle,
   PanelLeftClose,
+  UserPlus,
+  Copy,
+  Trash2,
+  Settings2,
+  ChevronsUpDown,
+  KeyRound,
 } from "lucide-react";
 import type { State, Task, User, Command } from "@/lib/types";
 import { attention } from "@/lib/domain";
 type View = "overview" | "tasks" | "team" | "agreement" | "activity";
+type OpenTeam = { id: string; name: string; size: number };
 const labels = { todo: "To do", in_progress: "In progress", done: "Done" };
 function date(s: string) {
   return new Date(s + "T12:00:00").toLocaleDateString("en-US", {
@@ -89,40 +102,115 @@ export default function Page() {
     [editProject, setEditProject] = useState(false),
     [companion, setCompanion] = useState(false),
     [cheer, setCheer] = useState(0),
-    [dismissed, setDismissed] = useState(false);
+    [dismissed, setDismissed] = useState(false),
+    [account, setAccount] = useState<Account | null>(null),
+    [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]),
+    [openTeams, setOpenTeams] = useState<OpenTeam[]>([]),
+    [adding, setAdding] = useState(false),
+    [invite, setInvite] = useState(""),
+    [inviteOpen, setInviteOpen] = useState(false),
+    [manage, setManage] = useState<string | null>(null),
+    [passwordOpen, setPasswordOpen] = useState(false),
+    [switcher, setSwitcher] = useState(false),
+    [menu, setMenu] = useState(false);
+  // One place that takes a /api/workspace payload apart.
+  function load(d: {
+    state: State | null;
+    userId?: string;
+    csrf: string;
+    namespace?: string;
+    account?: Account;
+    workspaces?: WorkspaceSummary[];
+    openTeams?: OpenTeam[];
+  }) {
+    setS(d.state);
+    setCsrf(d.csrf);
+    setAccount(d.account || null);
+    setWorkspaces(d.workspaces || []);
+    setOpenTeams(d.openTeams || []);
+    if (d.userId) setUserId(d.userId);
+    setNamespace(d.namespace || "");
+    if (d.state)
+      setTeamId((t) =>
+        d.state!.teams.some((x) => x.id === t)
+          ? t
+          : d.state!.teams[0]?.id || "",
+      );
+  }
   async function refresh() {
     try {
       const r = await fetch("/api/workspace");
-      if (r.ok) {
-        const d = await r.json();
-        setS(d.state);
-        setUserId(d.userId);
-        setCsrf(d.csrf);
-        setNamespace(d.namespace || "demo");
-        setTeamId((t) =>
-          d.state.teams.some((x: { id: string }) => x.id === t)
-            ? t
-            : d.state.teams[0]?.id || "",
-        );
-      } else setS(null);
+      if (r.ok) load(await r.json());
+      else {
+        setS(null);
+        setAccount(null);
+      }
     } catch {
       setError("Cannot connect. Please retry.");
     } finally {
       setLoading(false);
     }
   }
+  // After signing in: an invite link joins that workspace straight away.
+  async function afterAuth() {
+    const code = invite;
+    if (code) {
+      const me = await (await fetch("/api/workspace")).json();
+      const r = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": me.csrf,
+        },
+        body: JSON.stringify({ action: "join", code }),
+      });
+      if (r.ok) {
+        setInvite("");
+        history.replaceState(null, "", "/");
+      } else
+        setError(
+          (await r.json().catch(() => ({}))).error ||
+            "Could not join that workspace.",
+        );
+    }
+    setAdding(false);
+    setView("overview");
+    setSelected(null);
+    await refresh();
+  }
+  async function switchTo(ns: string) {
+    setSwitcher(false);
+    setMenu(false);
+    if (ns === namespace) return;
+    const r = await fetch("/api/workspaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-csrf-token": csrf },
+      body: JSON.stringify({ action: "switch", namespace: ns }),
+    });
+    if (!r.ok) return setError("Could not open that workspace.");
+    setView("overview");
+    setSelected(null);
+    await refresh();
+  }
+  function signOut() {
+    void fetch("/api/auth/logout", { method: "POST" });
+    setS(null);
+    setAccount(null);
+    setAdding(false);
+    setError("");
+  }
   useSpotlight();
   useMotionGate();
   useEffect(() => {
+    const code = new URLSearchParams(location.search).get("join");
     fetch("/api/workspace")
       .then(async (r) => {
+        if (code) setInvite(code.toUpperCase());
         if (r.ok) {
           const d = await r.json();
-          setS(d.state);
-          setUserId(d.userId);
-          setCsrf(d.csrf);
-          setNamespace(d.namespace || "demo");
-          setTeamId(d.state.teams[0]?.id || "");
+          load(d);
+          // Signed in already and opened someone's invite link: offer to join.
+          if (code && d.account && d.state) setAdding(true);
         }
         document.documentElement.classList.toggle(
           "embedded",
@@ -133,40 +221,44 @@ export default function Page() {
       .catch(() => setError("Cannot connect. Please retry."))
       .finally(() => setLoading(false));
   }, []);
+  // Menus close on a click elsewhere or Escape.
+  useEffect(() => {
+    if (!menu && !switcher) return;
+    const close = (e: Event) => {
+      if (
+        e instanceof KeyboardEvent
+          ? e.key === "Escape"
+          : !(e.target as Element).closest(".account-wrap, .course-switch-wrap")
+      ) {
+        setMenu(false);
+        setSwitcher(false);
+      }
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [menu, switcher]);
+  // Teammates' changes show up without a reload.
+  useEffect(() => {
+    if (!s) return;
+    const id = setInterval(() => {
+      if (
+        document.visibilityState === "visible" &&
+        !document.querySelector("dialog[open]")
+      )
+        void refresh();
+    }, 30000);
+    return () => clearInterval(id);
+  }, [!!s]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(""), 3500);
       return () => clearTimeout(t);
     }
   }, [toast]);
-  async function login(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = new FormData(e.currentTarget);
-    setBusy(true);
-    setError("");
-    try {
-      const r = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.get("email"),
-          password: form.get("password"),
-        }),
-      });
-      if (!r.ok)
-        throw Error(
-          (await r.json().catch(() => ({}))).error ||
-            "Could not sign in. Please retry.",
-        );
-      await refresh();
-      setView("overview");
-      setSelected(null);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
   async function command(c: Command, message = "Changes saved") {
     setBusy(true);
     setError("");
@@ -179,6 +271,7 @@ export default function Page() {
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
       setS(d.state);
+      if (d.openTeams) setOpenTeams(d.openTeams);
       setToast(message);
       setCheer((n) => n + 1);
       return true;
@@ -199,6 +292,18 @@ export default function Page() {
         <span className="spinner" />
         Opening your workspace…
       </main>
+    );
+  if (account && (!s || adding))
+    return (
+      <Onboarding
+        account={account}
+        workspaces={workspaces}
+        csrf={csrf}
+        invite={invite}
+        onDone={afterAuth}
+        onBack={s ? () => setAdding(false) : undefined}
+        onSignOut={signOut}
+      />
     );
   if (!s)
     return (
@@ -237,66 +342,20 @@ export default function Page() {
           <div className="welcome-theme">
             <ThemeToggle />
           </div>
-          <div className="demo-badge">
-            <span />
-            Interactive class demo
-          </div>
-          <h2>Welcome back.</h2>
-          <p>
-            Sign in with your class account.
-            <br />
-            Changes are saved and shared with your team.
-          </p>
-          <form className="signin" onSubmit={login}>
-            <label>
-              Email
-              <input
-                name="email"
-                type="email"
-                autoComplete="username"
-                placeholder="you@teamtrack.test"
-                required
-              />
-            </label>
-            <label>
-              Password
-              <input
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </label>
-            <button className="primary" disabled={busy}>
-              {busy ? "Signing in…" : "Sign in"}
-              <ArrowRight size={18} />
-            </button>
-          </form>
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-          <a
-            className="canvas-note"
-            href="/lms"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <GraduationCap size={22} />
-            <p>
-              <strong>Open the class course page</strong>
-              <br />
-              See TeamTrack launched from a course in the demo LMS, the same way
-              it opens inside Canvas.
-            </p>
-            <ArrowUpRight size={18} />
-          </a>
+          <AuthPanel invite={invite} onDone={afterAuth} />
         </section>
       </main>
     );
   const me = s.users.find((u) => u.id === userId)!,
     prof = me.role === "instructor",
+    organizer = prof || !!me.owner,
+    noTeam = !prof && !s.teams.some((t) => t.memberIds.includes(userId)),
+    unassigned = s.users.filter(
+      (u) =>
+        u.role === "student" &&
+        u.active !== false &&
+        !s.teams.some((t) => t.memberIds.includes(u.id)),
+    ),
     team = s.teams.find((t) => t.id === teamId) || s.teams[0],
     tasks = s.tasks.filter((t) => t.teamId === team?.id),
     all = prof ? s.tasks : tasks,
@@ -324,12 +383,23 @@ export default function Page() {
     {
       id: "overview",
       name: prof ? "Course overview" : "Overview",
+      short: "Home",
       icon: LayoutDashboard,
     },
-    { id: "tasks", name: "Tasks", icon: ListTodo },
-    { id: "team", name: prof ? "Teams & people" : "My team", icon: Users },
-    { id: "agreement", name: "Team agreement", icon: FileCheck2 },
-    { id: "activity", name: "Activity", icon: Activity },
+    { id: "tasks", name: "Tasks", short: "Tasks", icon: ListTodo },
+    {
+      id: "team",
+      name: prof ? "Teams & people" : "My team",
+      short: prof ? "Teams" : "Team",
+      icon: Users,
+    },
+    {
+      id: "agreement",
+      name: "Team agreement",
+      short: "Agreement",
+      icon: FileCheck2,
+    },
+    { id: "activity", name: "Activity", short: "Activity", icon: Activity },
   ] as const;
   const open = all.filter((t) => t.status !== "done"),
     guide: {
@@ -373,28 +443,36 @@ export default function Page() {
             view: "team",
           },
         ]
-      : [
-          {
-            label: "Accept your team agreement",
-            done: !!team && team.accepted.includes(userId),
-            view: "agreement",
-          },
-          {
-            label: open.some((t) => t.ownerId === userId)
-              ? `Move your ${open.filter((t) => t.ownerId === userId).length} open task${open.filter((t) => t.ownerId === userId).length === 1 ? "" : "s"} forward`
-              : "Pick up a task",
-            done: false,
-            view: "tasks",
-            filter: "mine",
-          },
-          {
-            label: blocked
-              ? "Help clear a team blocker"
-              : "No blockers on your team",
-            done: !blocked,
-            view: "tasks",
-          },
-        ];
+      : noTeam
+        ? [
+            {
+              label: "Join or start a team",
+              done: false,
+              view: "team",
+            },
+          ]
+        : [
+            {
+              label: "Accept your team agreement",
+              done: !!team && team.accepted.includes(userId),
+              view: "agreement",
+            },
+            {
+              label: open.some((t) => t.ownerId === userId)
+                ? `Move your ${open.filter((t) => t.ownerId === userId).length} open task${open.filter((t) => t.ownerId === userId).length === 1 ? "" : "s"} forward`
+                : "Pick up a task",
+              done: false,
+              view: "tasks",
+              filter: "mine",
+            },
+            {
+              label: blocked
+                ? "Help clear a team blocker"
+                : "No blockers on your team",
+              done: !blocked,
+              view: "tasks",
+            },
+          ];
   const todoCount = guide.filter((g) => !g.done).length;
   const pipPanel = (
     <>
@@ -511,16 +589,51 @@ export default function Page() {
           <Logo size={30} />
           TeamTrack
         </Link>
-        <div className="course-switch">
-          <GraduationCap size={20} />
-          <div>
-            <strong>
-              {namespace === "demo" ? "Product development" : s.course}
-            </strong>
-            <small>
-              {namespace === "demo" ? "Fall 2026 · CSS 474" : "Canvas course"}
-            </small>
-          </div>
+        <div className="course-switch-wrap">
+          <button
+            className="course-switch"
+            disabled={!account}
+            aria-expanded={account ? switcher : undefined}
+            onClick={() => setSwitcher(!switcher)}
+          >
+            <GraduationCap size={20} />
+            <div>
+              <strong>
+                {namespace === "demo" ? "Product development" : s.project}
+              </strong>
+              <small>
+                {namespace === "demo" ? "Fall 2026 · CSS 474" : s.course}
+              </small>
+            </div>
+            {account && <ChevronsUpDown size={15} />}
+          </button>
+          {switcher && account && (
+            <div className="switcher" role="menu">
+              {workspaces.map((w) => (
+                <button
+                  key={w.namespace}
+                  role="menuitem"
+                  className={w.namespace === namespace ? "current" : ""}
+                  onClick={() => switchTo(w.namespace)}
+                >
+                  <strong>{w.project}</strong>
+                  <small>{w.course}</small>
+                  {w.namespace === namespace && <Check size={14} />}
+                </button>
+              ))}
+              <button
+                role="menuitem"
+                className="switcher-add"
+                onClick={() => {
+                  setSwitcher(false);
+                  setAdding(true);
+                }}
+              >
+                <Plus size={14} />
+                Create or join another
+              </button>
+            </div>
+          )}
         </div>
         <div className="nav-label">Your workspace</div>
         <nav>
@@ -537,6 +650,9 @@ export default function Page() {
             >
               <n.icon size={19} />
               {n.name}
+              <span className="nav-short" aria-hidden="true">
+                {n.short}
+              </span>
               {n.id === "tasks" && (
                 <span className="nav-count">
                   {tasks.filter((t) => t.status !== "done").length}
@@ -565,17 +681,20 @@ export default function Page() {
             <Avatar user={me} />
             <div>
               <strong>{me.name}</strong>
-              <small>{prof ? "Instructor" : "Student"}</small>
+              <small>
+                {prof ? "Instructor" : me.owner ? "Organizer" : "Student"}
+              </small>
             </div>
-            <button
-              title="Sign out"
-              aria-label="Sign out"
-              onClick={() => {
-                void fetch("/api/auth/logout", { method: "POST" });
-                setS(null);
-                setError("");
-              }}
-            >
+            {account && (
+              <button
+                title="Change password"
+                aria-label="Change password"
+                onClick={() => setPasswordOpen(true)}
+              >
+                <KeyRound size={16} />
+              </button>
+            )}
+            <button title="Sign out" aria-label="Sign out" onClick={signOut}>
               <LogOut size={17} />
             </button>
           </div>
@@ -590,10 +709,20 @@ export default function Page() {
             <strong>{nav.find((n) => n.id === view)?.name}</strong>
           </div>
           <div className="top-actions">
-            <span className="demo-badge">
-              <span />
-              {s.integration ? "LMS connected" : "Class demo"}
-            </span>
+            {s.inviteCode ? (
+              <button
+                className="secondary invite-button"
+                onClick={() => setInviteOpen(true)}
+              >
+                <UserPlus size={15} />
+                Invite
+              </button>
+            ) : (
+              <span className="demo-badge">
+                <span />
+                {s.integration ? "LMS connected" : "Class demo"}
+              </span>
+            )}
             <button
               className="icon-button"
               onClick={() => {
@@ -605,7 +734,74 @@ export default function Page() {
               <RefreshCw size={17} />
             </button>
             <ThemeToggle />
-            <Avatar user={me} small />
+            <div className="account-wrap">
+              <button
+                className="account-button"
+                aria-label="Account and workspaces"
+                aria-expanded={menu}
+                onClick={() => setMenu(!menu)}
+              >
+                <Avatar user={me} small />
+              </button>
+              {menu && (
+                <div className="account-menu" role="menu">
+                  <div className="account-head">
+                    <Avatar user={me} />
+                    <div>
+                      <strong>{me.name}</strong>
+                      <small>
+                        {account?.email || (prof ? "Instructor" : "Student")}
+                      </small>
+                    </div>
+                  </div>
+                  {account && (
+                    <>
+                      <span className="menu-label">Workspaces</span>
+                      {workspaces.map((w) => (
+                        <button
+                          key={w.namespace}
+                          role="menuitem"
+                          className={w.namespace === namespace ? "current" : ""}
+                          onClick={() => switchTo(w.namespace)}
+                        >
+                          <GraduationCap size={15} />
+                          <span>
+                            {w.project}
+                            <small>{w.course}</small>
+                          </span>
+                          {w.namespace === namespace && <Check size={14} />}
+                        </button>
+                      ))}
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setMenu(false);
+                          setAdding(true);
+                        }}
+                      >
+                        <Plus size={15} />
+                        <span>Create or join another</span>
+                      </button>
+                      <hr />
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setMenu(false);
+                          setPasswordOpen(true);
+                        }}
+                      >
+                        <KeyRound size={15} />
+                        <span>Change password</span>
+                      </button>
+                    </>
+                  )}
+                  <button role="menuitem" onClick={signOut}>
+                    <LogOut size={15} />
+                    <span>Sign out</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <main className="main">
@@ -678,10 +874,25 @@ export default function Page() {
                 )}
               </div>
             )}
-            {view === "tasks" || view === "overview" ? (
+            {prof && !s.teams.length && view !== "team" ? (
+              <button className="primary" onClick={() => setNewTeam(true)}>
+                <Plus size={17} />
+                Create team
+              </button>
+            ) : noTeam && view !== "team" ? (
+              <button className="primary" onClick={() => setView("team")}>
+                <Users size={17} />
+                Find your team
+              </button>
+            ) : view === "tasks" || view === "overview" ? (
               <button
                 className="primary"
-                disabled={!team}
+                disabled={!team || !team.memberIds.length}
+                title={
+                  team && !team.memberIds.length
+                    ? "Add members to this team first"
+                    : undefined
+                }
                 onClick={() => setNewTask(true)}
               >
                 <Plus size={17} />
@@ -757,7 +968,7 @@ export default function Page() {
               ) : team ? (
                 <span className="team-label">{team.name}</span>
               ) : null}
-              {prof && (
+              {organizer && (
                 <button
                   className="icon-button"
                   aria-label="Edit project brief"
@@ -833,13 +1044,15 @@ export default function Page() {
                         }
                       />
                       <small>
-                        {prof ? "" : ` / ${team?.memberIds.length}`}
+                        {prof || !team ? "" : ` / ${team.memberIds.length}`}
                       </small>
                     </strong>
                     <small>
                       {prof
                         ? "Working toward a shared goal"
-                        : "Members have accepted this version"}
+                        : team
+                          ? "Members have accepted this version"
+                          : "Join a team to see its agreement"}
                     </small>
                   </div>
                 </div>
@@ -873,7 +1086,44 @@ export default function Page() {
                         <ArrowUpRight size={15} />
                       </button>
                     </div>
-                    {prof ? (
+                    {prof && !s.teams.length ? (
+                      <div className="empty">
+                        <Users />
+                        {s.users.some((u) => u.role === "student")
+                          ? "Students have joined. Put them into teams."
+                          : "No students yet. Share your invite code to bring them in."}
+                        <span className="empty-actions">
+                          {s.inviteCode && (
+                            <button
+                              className="secondary"
+                              onClick={() => setInviteOpen(true)}
+                            >
+                              <UserPlus size={15} />
+                              Invite students
+                            </button>
+                          )}
+                          <button
+                            className="primary"
+                            onClick={() => setNewTeam(true)}
+                          >
+                            <Plus size={15} />
+                            Create a team
+                          </button>
+                        </span>
+                      </div>
+                    ) : noTeam ? (
+                      <div className="empty">
+                        <Users />
+                        You’re not on a team yet. Join yours or start one.
+                        <button
+                          className="primary"
+                          onClick={() => setView("team")}
+                        >
+                          Find your team
+                          <ArrowRight size={15} />
+                        </button>
+                      </div>
+                    ) : prof ? (
                       <div className="team-overview team-folders">
                         {s.teams.map((t) => {
                           const h = teamHealth(s, t, today()),
@@ -932,11 +1182,26 @@ export default function Page() {
                           .filter((t) => t.status !== "done")
                           .slice(0, 3)
                           .map(taskRow)}
-                        {!tasks.some((t) => t.status !== "done") && (
+                        {!tasks.length ? (
                           <div className="empty">
-                            <CheckCircle2 />
-                            You’re all caught up. Nice work.
+                            <ListTodo />
+                            No tasks yet. Break the project into a few first
+                            steps.
+                            <button
+                              className="primary"
+                              onClick={() => setNewTask(true)}
+                            >
+                              <Plus size={15} />
+                              Add the first task
+                            </button>
                           </div>
+                        ) : (
+                          !tasks.some((t) => t.status !== "done") && (
+                            <div className="empty">
+                              <CheckCircle2 />
+                              You’re all caught up. Nice work.
+                            </div>
+                          )
                         )}
                       </div>
                     )}
@@ -950,29 +1215,17 @@ export default function Page() {
                       <Compass size={16} />
                       Team focus
                     </span>
-                    <h2>
-                      Find the friction.
-                      <br />
-                      Make the path clearer.
-                    </h2>
+                    {namespace === "demo" ? (
+                      <h2>
+                        Find the friction.
+                        <br />
+                        Make the path clearer.
+                      </h2>
+                    ) : (
+                      <h2>{s.project}</h2>
+                    )}
                     <p>{s.description}</p>
-                    <div className="checkpoint-track">
-                      <span className="finished">
-                        <Check size={12} />
-                      </span>
-                      <i />
-                      <span className="current" />
-                      <i />
-                      <span />
-                      <i />
-                      <span />
-                    </div>
-                    <div className="checkpoint-labels">
-                      <span>Discover</span>
-                      <span>Define</span>
-                      <span>Prototype</span>
-                      <span>Share</span>
-                    </div>
+                    <CheckpointTrack checkpoints={s.checkpoints || []} />
                     <button onClick={() => setView("tasks")}>
                       Keep the project moving
                       <ArrowRight size={17} />
@@ -1171,6 +1424,145 @@ export default function Page() {
                 )}
               </section>
             )}
+            {view === "team" && noTeam && (
+              <div className="join-team">
+                <section className="panel">
+                  <div className="panel-title">
+                    <div>
+                      <h2>Join your team</h2>
+                      <p>
+                        {openTeams.length
+                          ? "Pick the team you’re working with."
+                          : "No teams yet. Start one and your teammates can join it."}
+                      </p>
+                    </div>
+                    <Users size={21} />
+                  </div>
+                  {openTeams.map((t) => (
+                    <div className="member-row" key={t.id}>
+                      <span className="team-emblem small">
+                        <Compass size={16} />
+                      </span>
+                      <div>
+                        <strong>{t.name}</strong>
+                        <span>
+                          {t.size} member{t.size === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <button
+                        className="secondary"
+                        disabled={busy}
+                        onClick={async () => {
+                          if (
+                            await command(
+                              { type: "team.join", teamId: t.id },
+                              `Welcome to ${t.name}`,
+                            )
+                          ) {
+                            await refresh();
+                            setView("overview");
+                          }
+                        }}
+                      >
+                        Join
+                      </button>
+                    </div>
+                  ))}
+                </section>
+                <section className="panel">
+                  <div className="panel-title">
+                    <div>
+                      <h2>Start a new team</h2>
+                      <p>
+                        You’ll be its first member. Share the invite code so
+                        others can join.
+                      </p>
+                    </div>
+                    <Plus size={21} />
+                  </div>
+                  <form
+                    className="inline-form"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const f = new FormData(e.currentTarget);
+                      if (
+                        await command(
+                          { type: "team.create", name: f.get("name") },
+                          "Team started",
+                        )
+                      ) {
+                        await refresh();
+                        setView("overview");
+                      }
+                    }}
+                  >
+                    <label>
+                      Team name
+                      <input
+                        name="name"
+                        required
+                        maxLength={120}
+                        placeholder="The Debuggers"
+                      />
+                    </label>
+                    <button className="primary" disabled={busy}>
+                      Start team
+                      <ArrowRight size={16} />
+                    </button>
+                  </form>
+                </section>
+              </div>
+            )}
+            {view === "team" && prof && !s.teams.length && (
+              <section className="panel">
+                <div className="empty">
+                  <Users />
+                  No teams yet.{" "}
+                  {unassigned.length
+                    ? `${unassigned.length} student${unassigned.length === 1 ? " is" : "s are"} waiting for one.`
+                    : "Invite students, then group them, or let them start their own."}
+                  <span className="empty-actions">
+                    {s.inviteCode && (
+                      <button
+                        className="secondary"
+                        onClick={() => setInviteOpen(true)}
+                      >
+                        <UserPlus size={15} />
+                        Invite students
+                      </button>
+                    )}
+                    <button
+                      className="primary"
+                      onClick={() => setNewTeam(true)}
+                    >
+                      <Plus size={15} />
+                      Create a team
+                    </button>
+                  </span>
+                </div>
+              </section>
+            )}
+            {view === "team" && prof && unassigned.length > 0 && (
+              <section className="panel unassigned">
+                <div className="panel-title">
+                  <div>
+                    <h2>Not on a team yet</h2>
+                    <p>
+                      They can join a team themselves, or you can add them from
+                      a team’s “Manage”.
+                    </p>
+                  </div>
+                </div>
+                <div className="chip-list">
+                  {unassigned.map((u) => (
+                    <span className="person-chip" key={u.id}>
+                      <Avatar user={u} small />
+                      {u.name}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
             {view === "team" && (
               <div className="team-grid">
                 {(prof ? s.teams : [team]).filter(Boolean).map((t) => (
@@ -1184,12 +1576,19 @@ export default function Page() {
                         <div>
                           <h2>{t.name}</h2>
                           <p>
-                            {t.memberIds.length} people, one shared project.
+                            {t.memberIds.length === 1
+                              ? "1 person"
+                              : `${t.memberIds.length} people`}
+                            , one shared project.
                           </p>
                         </div>
-                        <span className="team-emblem">
-                          <Compass size={24} />
-                        </span>
+                        <button
+                          className="secondary"
+                          onClick={() => setManage(t.id)}
+                        >
+                          <Settings2 size={15} />
+                          Manage
+                        </button>
                       </div>
                       <MemberBreakdown
                         rows={memberBreakdown(s, t)}
@@ -1214,6 +1613,23 @@ export default function Page() {
                   </Folder>
                 ))}
               </div>
+            )}
+            {view === "agreement" && !team && (
+              <section className="panel">
+                <div className="empty">
+                  <FileCheck2 />
+                  {prof
+                    ? "Each team writes its own agreement. Create a team first."
+                    : "Your team agreement appears once you’re on a team."}
+                  <button
+                    className="primary"
+                    onClick={() => (prof ? setNewTeam(true) : setView("team"))}
+                  >
+                    {prof ? "Create a team" : "Find your team"}
+                    <ArrowRight size={15} />
+                  </button>
+                </div>
+              </section>
             )}
             {view === "agreement" && team && (
               <div className="agreement-grid">
@@ -1423,7 +1839,11 @@ export default function Page() {
                 </button>
               )}
               TeamTrack <span className="dot">·</span>{" "}
-              {namespace === "demo" ? "Class demo" : "Canvas course"}
+              {namespace === "demo"
+                ? "Class demo"
+                : s.inviteCode
+                  ? s.course
+                  : "Canvas course"}
             </span>
           </footer>
         </main>
@@ -1579,7 +1999,7 @@ export default function Page() {
         <Modal
           error={error}
           title="Bring a team together"
-          subtitle="Choose students who aren’t already assigned."
+          subtitle="Name it, and add students who aren’t on a team yet. You can add more later."
           onClose={() => setNewTeam(false)}
         >
           <form
@@ -1619,18 +2039,13 @@ export default function Page() {
               (u) =>
                 u.role === "student" &&
                 !s.teams.some((t) => t.memberIds.includes(u.id)),
-            ) && <p>All enrolled students are already in a team.</p>}
-            <button
-              className="primary"
-              disabled={
-                busy ||
-                !s.users.some(
-                  (u) =>
-                    u.role === "student" &&
-                    !s.teams.some((t) => t.memberIds.includes(u.id)),
-                )
-              }
-            >
+            ) && (
+              <p className="form-note">
+                No unassigned students right now. Create the team empty and
+                students can join it themselves.
+              </p>
+            )}
+            <button className="primary" disabled={busy}>
               Create team
             </button>
           </form>
@@ -1652,20 +2067,39 @@ export default function Page() {
                   type: "project.update",
                   title: f.get("title"),
                   description: f.get("description"),
+                  due: f.get("due"),
+                  ...(f.has("course") ? { course: f.get("course") } : {}),
                 })
               )
                 setEditProject(false);
             }}
           >
-            <label>
-              Project title
-              <input
-                name="title"
-                defaultValue={s.project}
-                required
-                maxLength={120}
-              />
-            </label>
+            {s.inviteCode && (
+              <label>
+                Class
+                <input
+                  name="course"
+                  defaultValue={s.course}
+                  required
+                  maxLength={120}
+                />
+              </label>
+            )}
+            <div className="form-grid">
+              <label>
+                Project title
+                <input
+                  name="title"
+                  defaultValue={s.project}
+                  required
+                  maxLength={120}
+                />
+              </label>
+              <label>
+                Final due date
+                <input name="due" type="date" defaultValue={s.due} required />
+              </label>
+            </div>
             <label>
               Description
               <textarea
@@ -1727,7 +2161,316 @@ export default function Page() {
           </div>
         </Modal>
       )}
+      {inviteOpen && s.inviteCode && (
+        <InviteModal
+          code={s.inviteCode}
+          canRotate={organizer}
+          busy={busy}
+          onRotate={() =>
+            command({ type: "invite.rotate" }, "New invite code ready")
+          }
+          onClose={() => setInviteOpen(false)}
+        />
+      )}
+      {passwordOpen && (
+        <PasswordModal csrf={csrf} onClose={() => setPasswordOpen(false)} />
+      )}
+      {manage &&
+        (() => {
+          const t = s.teams.find((x) => x.id === manage);
+          if (!t) return null;
+          const people = s.users.filter((u) => t.memberIds.includes(u.id));
+          return (
+            <Modal
+              error={error}
+              title={`Manage ${t.name}`}
+              subtitle={
+                prof
+                  ? "Rename the team and change who’s on it."
+                  : "Rename your team, or leave it if you joined the wrong one."
+              }
+              onClose={() => setManage(null)}
+            >
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  await command(
+                    { type: "team.update", teamId: t.id, name: f.get("name") },
+                    "Team renamed",
+                  );
+                }}
+              >
+                <label>
+                  Team name
+                  <input
+                    name="name"
+                    defaultValue={t.name}
+                    required
+                    maxLength={120}
+                  />
+                </label>
+                <button className="secondary" disabled={busy}>
+                  Save name
+                </button>
+              </form>
+              <h3 className="modal-section">Members</h3>
+              {people.map((u) => (
+                <div className="manage-row" key={u.id}>
+                  <Avatar user={u} small />
+                  <span>{u.name}</span>
+                  {prof && (
+                    <button
+                      className="text-button danger"
+                      disabled={busy}
+                      onClick={() =>
+                        confirm(`Remove ${u.name} from ${t.name}?`) &&
+                        command(
+                          { type: "team.update", teamId: t.id, remove: u.id },
+                          `${u.name} removed`,
+                        )
+                      }
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              {!people.length && <p className="form-note">No members yet.</p>}
+              {prof && unassigned.length > 0 && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget;
+                    const add = new FormData(form).getAll("add");
+                    if (!add.length) return;
+                    if (
+                      await command(
+                        { type: "team.update", teamId: t.id, add },
+                        "Members added",
+                      )
+                    )
+                      form.reset();
+                  }}
+                >
+                  <h3 className="modal-section">Add students</h3>
+                  {unassigned.map((u) => (
+                    <label className="checkbox-label" key={u.id}>
+                      <input type="checkbox" name="add" value={u.id} />
+                      {u.name}
+                    </label>
+                  ))}
+                  <button className="secondary" disabled={busy}>
+                    Add to team
+                  </button>
+                </form>
+              )}
+              {!prof && t.memberIds.includes(userId) && (
+                <div className="modal-actions">
+                  <button
+                    className="secondary danger"
+                    disabled={busy}
+                    onClick={async () => {
+                      if (!confirm(`Leave ${t.name}?`)) return;
+                      if (
+                        await command(
+                          { type: "team.leave", teamId: t.id },
+                          "You left the team",
+                        )
+                      ) {
+                        setManage(null);
+                        await refresh();
+                        setView("team");
+                      }
+                    }}
+                  >
+                    Leave team
+                  </button>
+                </div>
+              )}
+            </Modal>
+          );
+        })()}
     </div>
+  );
+}
+function CheckpointTrack({
+  checkpoints,
+}: {
+  checkpoints: NonNullable<State["checkpoints"]>;
+}) {
+  const sorted = [...checkpoints].sort((a, b) => a.due.localeCompare(b.due)),
+    cur = sorted.findIndex((c) => c.due >= today()),
+    at = cur === -1 ? sorted.length : cur,
+    start = Math.max(0, Math.min(at - 1, sorted.length - 5)),
+    shown = sorted.slice(start, start + 5);
+  if (!shown.length) return null;
+  return (
+    <>
+      <div className="checkpoint-track">
+        {shown.map((c, i) => {
+          const n = start + i;
+          return (
+            <Fragment key={c.id}>
+              {i > 0 && <i />}
+              <span
+                className={n < at ? "finished" : n === at ? "current" : ""}
+                title={`${c.title} · ${date(c.due)}`}
+              >
+                {n < at && <Check size={12} />}
+              </span>
+            </Fragment>
+          );
+        })}
+      </div>
+      <div className="checkpoint-labels">
+        {shown.map((c) => (
+          <span key={c.id}>{c.title}</span>
+        ))}
+      </div>
+    </>
+  );
+}
+function InviteModal({
+  code,
+  canRotate,
+  busy,
+  onRotate,
+  onClose,
+}: {
+  code: string;
+  canRotate: boolean;
+  busy: boolean;
+  onRotate: () => Promise<boolean>;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState("");
+  const pretty = code.slice(0, 4) + "-" + code.slice(4);
+  const link = `${location.origin}/?join=${code}`;
+  const copy = async (what: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(what);
+    } catch {
+      setCopied("");
+    }
+  };
+  return (
+    <Modal
+      title="Invite people"
+      subtitle="Anyone with this code or link joins as a student, then picks or starts their team."
+      onClose={onClose}
+    >
+      <div className="invite-code" aria-label="Invite code">
+        {pretty}
+      </div>
+      <div className="invite-actions">
+        <button className="primary" onClick={() => copy("link", link)}>
+          <Link2 size={15} />
+          {copied === "link" ? "Link copied" : "Copy invite link"}
+        </button>
+        <button className="secondary" onClick={() => copy("code", pretty)}>
+          <Copy size={15} />
+          {copied === "code" ? "Code copied" : "Copy code"}
+        </button>
+      </div>
+      <p className="form-note">{link}</p>
+      {canRotate && (
+        <button
+          className="text-button"
+          disabled={busy}
+          onClick={() =>
+            confirm(
+              "Make a new code? The current code and link stop working; people already in stay in.",
+            ) && onRotate()
+          }
+        >
+          <RefreshCw size={13} />
+          Replace with a new code
+        </button>
+      )}
+    </Modal>
+  );
+}
+function PasswordModal({
+  csrf,
+  onClose,
+}: {
+  csrf: string;
+  onClose: () => void;
+}) {
+  const [error, setError] = useState(""),
+    [done, setDone] = useState(false),
+    [busy, setBusy] = useState(false);
+  return (
+    <Modal
+      error={error}
+      title="Change password"
+      subtitle="Use at least 8 characters."
+      onClose={onClose}
+    >
+      {done ? (
+        <div className="accepted">
+          <CheckCircle2 size={20} />
+          Password changed.
+        </div>
+      ) : (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = new FormData(e.currentTarget);
+            setBusy(true);
+            setError("");
+            try {
+              const r = await fetch("/api/auth/password", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-csrf-token": csrf,
+                },
+                body: JSON.stringify({
+                  current: f.get("current"),
+                  next: f.get("next"),
+                }),
+              });
+              if (!r.ok)
+                throw Error(
+                  (await r.json().catch(() => ({}))).error ||
+                    "Could not change the password.",
+                );
+              setDone(true);
+            } catch (err) {
+              setError((err as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <label>
+            Current password
+            <input
+              name="current"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </label>
+          <label>
+            New password
+            <input
+              name="next"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+          </label>
+          <button className="primary" disabled={busy}>
+            Change password
+          </button>
+        </form>
+      )}
+    </Modal>
   );
 }
 function Modal({
@@ -1859,9 +2602,35 @@ function TaskDrawer({
               Due date
               <input name="due" type="date" defaultValue={task.due} required />
             </label>
-            <button className="secondary" disabled={busy}>
-              Save task details
-            </button>
+            <div className="modal-actions split">
+              <button
+                type="button"
+                className="text-button danger"
+                disabled={busy}
+                onClick={async () => {
+                  if (
+                    confirm(
+                      `Delete “${task.title}” and its updates? This can’t be undone.`,
+                    ) &&
+                    (await command(
+                      {
+                        type: "task.delete",
+                        id: task.id,
+                        version: task.version,
+                      },
+                      "Task deleted",
+                    ))
+                  )
+                    onClose();
+                }}
+              >
+                <Trash2 size={14} />
+                Delete task
+              </button>
+              <button className="secondary" disabled={busy}>
+                Save task details
+              </button>
+            </div>
           </form>
         </details>
         <div className="task-properties">

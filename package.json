@@ -6,11 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run tests/domain.test.ts tests/lti.test.ts tests/insights.test.ts",
+    "test": "vitest run tests/domain.test.ts tests/lti.test.ts tests/insights.test.ts tests/workspace.test.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
     "test:integration": "vitest run tests/api.test.ts",
-    "demo:reset": "node --env-file=.env.local --import tsx scripts/reset-demo.ts --synthetic-demo-only"
+    "demo:reset": "node --env-file=.env.local --import tsx scripts/reset-demo.ts --synthetic-demo-only",
+    "test:accounts": "vitest run tests/accounts.test.ts"
   },
   "dependencies": {
     "jose": "^6.2.12",

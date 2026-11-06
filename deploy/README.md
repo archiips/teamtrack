@@ -61,6 +61,14 @@ Do not stop Docker or the tunnel during the Canvas demonstration. The standalone
 
 Canvas LTI client IDs are **global** DeveloperKey identifiers (`developer_key.global_id`), not local database IDs (`developer_key.id`). This sandbox's two values differ. Verify issuer and global client ID before investigating browser framing: an application/json rejection in a cross-origin frame can appear as a Chrome blocked page rather than a readable configuration error. LTI initiation errors now use a readable HTML page.
 
+## Real accounts (classes and groups)
+
+Anyone can create an account on the live site, create a workspace and share its invite code; see the main README. Real workspaces (`w_…` namespaces) live in the same Neon database as the demo. `npm run demo:reset` never touches them.
+
+- Forgotten password (no email service): `node --env-file=.env.local --import tsx scripts/reset-password.ts person@school.edu` prints a one-time password once. Share it privately; they change it from the avatar menu.
+- An instructor or organizer can replace a leaked invite code from the Invite dialog; people already in stay in.
+- Don't run `npm run test:accounts` against production: it creates accounts.
+
 ## Reset and release
 
 `npm run demo:reset` resets only the standalone `demo` namespace, its demo accounts (they re-create with the current DEMO_PASSWORD on next sign-in; run it after changing the password) and its demo LMS roster link (reconnects on the professor's next LMS launch). It never resets Canvas course workspaces. Use only for rehearsal/presentation preparation, not after collecting real pilot work.

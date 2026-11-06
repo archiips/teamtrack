@@ -7,6 +7,8 @@ export type User = {
   initials: string;
   color: string;
   active?: boolean;
+  /** Created this workspace: may edit the brief and checkpoints even as a student. */
+  owner?: boolean;
 };
 export type Team = {
   id: string;
@@ -51,6 +53,8 @@ export type State = {
   checkpoints?: { id: string; title: string; due: string }[];
   integration?: { lastSync: string | null; error: string | null };
   version: number;
+  /** Code people use to join this workspace (own-account workspaces only). */
+  inviteCode?: string;
   course: string;
   project: string;
   description: string;

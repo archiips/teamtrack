@@ -72,6 +72,9 @@ describe("team access and work history", () => {
         name: "New team",
         memberIds: ["s1"],
       }),
+    ).toThrow("already on a team");
+    expect(() =>
+      apply(seed(), "s1", { type: "team.update", teamId: "t1", add: ["s9"] }),
     ).toThrow("Instructor");
   });
 });
@@ -156,7 +159,7 @@ it("lets only instructors create dated project checkpoints", () => {
       title: "Pilot review",
       due: "2026-10-25",
     }),
-  ).toThrow("Instructor");
+  ).toThrow("organizer");
   const s = apply(seed(), "p1", {
     type: "checkpoint.create",
     title: "Pilot review",
