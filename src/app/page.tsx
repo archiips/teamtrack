@@ -122,6 +122,7 @@ export default function Page() {
     [menu, setMenu] = useState(false),
     [ghEnabled, setGhEnabled] = useState(false),
     [ghData, setGhData] = useState<Record<string, GithubData>>({}),
+    [ghTick, setGhTick] = useState(0),
     [ghPick, setGhPick] = useState<{
       token: string;
       repos: { repo: string; private: boolean }[];
@@ -154,8 +155,11 @@ export default function Page() {
   async function refresh() {
     try {
       const r = await fetch("/api/workspace");
-      if (r.ok) load(await r.json());
-      else {
+      if (r.ok) {
+        load(await r.json());
+        // Refresh (button or the 30s poll) also brings in new commits.
+        setGhTick((n) => n + 1);
+      } else {
         setS(null);
         setAccount(null);
       }
@@ -270,7 +274,7 @@ export default function Page() {
     return () => {
       live = false;
     };
-  }, [ghEnabled, linked, cheer]);
+  }, [ghEnabled, linked, cheer, ghTick]);
   // Menus close on a click elsewhere or Escape.
   useEffect(() => {
     if (!menu && !switcher) return;
