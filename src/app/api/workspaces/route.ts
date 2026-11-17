@@ -6,6 +6,14 @@ import {
   joinWorkspace,
   practiceWorkspace,
 } from "@/lib/workspaces";
+import {
+  createClass,
+  requireClassOwner,
+  attachClass,
+  monitorInvite,
+  joinMonitor,
+  removeMonitor,
+} from "@/lib/classes";
 export const dynamic = "force-dynamic";
 /** Create, join or switch workspaces; each re-issues the session for the chosen one. */
 export async function POST(req: Request) {
@@ -24,9 +32,38 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     let namespace: string;
-    if (body.action === "create")
+    if (body.action === "class.create") {
+      const id = await createClass(a.userId, body.name);
+      return NextResponse.json({ ok: true, id });
+    }
+    if (body.action === "class.attach") {
+      await attachClass(
+        a.userId,
+        String(body.classId ?? ""),
+        String(body.namespace ?? ""),
+      );
+      return NextResponse.json({ ok: true });
+    }
+    if (body.action === "monitor.invite") {
+      const token = await monitorInvite(a.userId, a.namespace);
+      return NextResponse.json({ ok: true, token });
+    }
+    if (body.action === "monitor.remove") {
+      await removeMonitor(a.userId, a.namespace, String(body.userId ?? ""));
+      return NextResponse.json({ ok: true });
+    }
+    if (body.action === "monitor.join")
+      namespace = await joinMonitor(a.userId, String(body.token ?? ""));
+    else if (body.action === "create") {
+      if (body.classId) {
+        await requireClassOwner(a.userId, String(body.classId));
+        if (body.role !== "instructor")
+          throw Error("Instructor access required");
+      }
       namespace = await createWorkspace(a.userId, body);
-    else if (body.action === "join")
+      if (body.classId)
+        await attachClass(a.userId, String(body.classId), namespace);
+    } else if (body.action === "join")
       namespace = await joinWorkspace(a.userId, String(body.code ?? ""));
     else if (body.action === "practice")
       namespace = await practiceWorkspace(a.userId, body.role);
@@ -44,7 +81,7 @@ export async function POST(req: Request) {
   } catch (e) {
     const message = e instanceof Error ? e.message : "Could not save";
     const known =
-      /Enter|Choose|code|workspace|removed|Unknown action|valid text/.test(
+      /Enter|Choose|code|workspace|removed|Unknown action|valid text|invite|Class|Instructor|already belong/.test(
         message,
       );
     return NextResponse.json(

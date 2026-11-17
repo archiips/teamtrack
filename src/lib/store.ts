@@ -52,6 +52,12 @@ export async function mutate(
       const rows =
         await tx`SELECT data FROM teamtrack_state WHERE id=${namespace} FOR UPDATE`;
       const s = apply(rows[0].data as State, actorId, c);
+      if (c.type === "task.delete") {
+        const [files] =
+          await tx`SELECT to_regclass('teamtrack_task_file') AS name`;
+        if (files.name)
+          await tx`DELETE FROM teamtrack_task_file WHERE namespace=${namespace} AND task_id=${String(c.id)}`;
+      }
       await tx`UPDATE teamtrack_state SET data=${tx.json(s)} WHERE id=${namespace}`;
       return s;
     }) as Promise<State>;

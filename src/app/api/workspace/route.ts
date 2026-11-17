@@ -6,6 +6,7 @@ import { openTeams, visible } from "@/lib/domain";
 import { accountById } from "@/lib/accounts";
 import { listWorkspaces, rotateInvite } from "@/lib/workspaces";
 import { githubEnabled } from "@/lib/github";
+import { listClasses, classMapping } from "@/lib/classes";
 export const dynamic = "force-dynamic";
 export async function GET() {
   try {
@@ -14,10 +15,16 @@ export async function GET() {
     const account = a.account ? await accountById(a.userId) : undefined;
     if (a.account && !account) throw Error("Please sign in");
     const workspaces = a.account ? await listWorkspaces(a.userId) : [];
+    const classes = a.account ? await listClasses(a.userId) : [];
+    const mapping = a.account ? await classMapping(a.userId) : {};
+    const grouped = workspaces.map((w) => ({
+      ...w,
+      classId: mapping[w.namespace],
+    }));
     // An own account with no workspace yet: the client shows create / join.
     if (!a.namespace)
       return NextResponse.json(
-        { state: null, account, workspaces, csrf: a.csrf },
+        { state: null, account, workspaces: grouped, classes, csrf: a.csrf },
         { headers },
       );
     const s = await readState(a.namespace);
@@ -30,7 +37,8 @@ export async function GET() {
         csrf: a.csrf,
         namespace: a.namespace,
         account,
-        workspaces,
+        workspaces: grouped,
+        classes,
         openTeams: openTeams(s, a.userId),
         github: githubEnabled(),
       },
@@ -55,6 +63,9 @@ export async function POST(req: Request) {
     if (raw.length > 20000)
       return NextResponse.json({ error: "Request too large" }, { status: 413 });
     const c = JSON.parse(raw);
+    const actorState = await readState(a.namespace);
+    if (actorState.users.find((u) => u.id === a.userId)?.monitor)
+      throw Error("Access denied: monitoring is read-only");
     if (!c || typeof c.type !== "string") throw Error("Invalid action");
     // Repo links come only from the GitHub callback, which verifies access first.
     if (c.type === "team.github.link") throw Error("Access denied");

@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     const s = visible(await readState(a.namespace), a.userId);
     const me = s.users.find((u) => u.id === a.userId);
     const t = s.teams.find((x) => x.id === teamId);
+    if (me?.monitor) throw Error("Monitoring access is read-only");
     if (!t || (me?.role !== "instructor" && leaderOf(s, t) !== a.userId))
       throw Error("Only the team leader can connect a repo");
     const state = await new SignJWT({

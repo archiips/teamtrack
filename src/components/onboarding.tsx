@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Logo } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
+import { ProfessorWorkspaces, type ClassSummary } from "./professor-workspaces";
 import { today } from "@/lib/dates";
 
 export type Account = { id: string; name: string; email: string };
@@ -21,6 +22,7 @@ export type WorkspaceSummary = {
   project: string;
   role: "instructor" | "student";
   practice?: boolean;
+  classId?: string;
 };
 
 async function post(url: string, body: unknown, csrf?: string) {
@@ -48,6 +50,9 @@ export function AuthPanel({
   const [mode, setMode] = useState<"signin" | "signup">(
     invite ? "signup" : "signin",
   );
+  const [entry, setEntry] = useState<"student" | "instructor">("student");
+  const [forgot, setForgot] = useState(false),
+    [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -56,6 +61,7 @@ export function AuthPanel({
     setBusy(true);
     setError("");
     try {
+      localStorage.setItem("tt-entry-role", entry);
       await post(mode === "signin" ? "/api/auth/login" : "/api/auth/signup", {
         name: f.get("name"),
         email: f.get("email"),
@@ -80,6 +86,28 @@ export function AuthPanel({
           <span />
           For student teams and their instructors
         </div>
+      )}
+      <div className="auth-tabs" aria-label="Sign in role">
+        <button
+          type="button"
+          className={entry === "student" ? "selected" : ""}
+          onClick={() => setEntry("student")}
+        >
+          Student login
+        </button>
+        <button
+          type="button"
+          className={entry === "instructor" ? "selected" : ""}
+          onClick={() => setEntry("instructor")}
+        >
+          Professor login
+        </button>
+      </div>
+      {entry === "instructor" && (
+        <p>
+          Create classes and team workspaces, or accept a team’s monitoring
+          invitation. Your workspace permissions determine access.
+        </p>
       )}
       <h2>{mode === "signin" ? "Welcome back." : "Create your account."}</h2>
       <p>
@@ -158,6 +186,53 @@ export function AuthPanel({
           <ArrowRight size={18} />
         </button>
       </form>
+      {mode === "signin" && (
+        <button
+          className="text-button"
+          type="button"
+          onClick={() => {
+            setForgot(!forgot);
+            setNotice("");
+          }}
+        >
+          Forgot password?
+        </button>
+      )}
+      {forgot && (
+        <form
+          className="signin"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const email = new FormData(e.currentTarget).get("recoveryEmail");
+            setBusy(true);
+            setNotice("");
+            try {
+              await post("/api/auth/forgot-password", { email });
+              setNotice(
+                "If an account uses that email, a password-reset link will arrive shortly. Check your spam folder too.",
+              );
+            } catch (e) {
+              setNotice((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <label>
+            Account email
+            <input
+              name="recoveryEmail"
+              type="email"
+              required
+              autoComplete="email"
+            />
+          </label>
+          <button className="secondary" disabled={busy}>
+            Send reset link
+          </button>
+        </form>
+      )}
+      {notice && <p role="status">{notice}</p>}
       {error && (
         <p className="error" role="alert">
           {error}
@@ -181,6 +256,9 @@ export function AuthPanel({
 export function Onboarding({
   account,
   workspaces,
+  classes,
+  monitorToken,
+  onRefresh,
   csrf,
   invite,
   onDone,
@@ -189,6 +267,9 @@ export function Onboarding({
 }: {
   account: Account;
   workspaces: WorkspaceSummary[];
+  classes: ClassSummary[];
+  monitorToken: string;
+  onRefresh: () => Promise<void>;
   csrf: string;
   invite: string;
   onDone: () => Promise<void>;
@@ -198,6 +279,16 @@ export function Onboarding({
   const [busy, setBusy] = useState(""),
     [error, setError] = useState(""),
     [role, setRole] = useState<"student" | "instructor">("student");
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      if (
+        localStorage.getItem("tt-entry-role") === "instructor" ||
+        monitorToken
+      )
+        setRole("instructor");
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [monitorToken]);
   async function act(kind: string, body: Record<string, unknown>) {
     setBusy(kind);
     setError("");
@@ -253,6 +344,34 @@ export function Onboarding({
             {error}
           </div>
         )}
+        {monitorToken && (
+          <section className="panel onboard-card">
+            <h2>Professor monitoring invitation</h2>
+            <p>
+              This grants read-only access to this workspace. It does not give
+              access to other teams’ workspaces.
+            </p>
+            <button
+              className="primary"
+              disabled={!!busy}
+              onClick={() =>
+                act("monitor", { action: "monitor.join", token: monitorToken })
+              }
+            >
+              Accept monitoring invitation
+            </button>
+          </section>
+        )}
+        {(role === "instructor" ||
+          classes.length > 0 ||
+          workspaces.some((w) => w.role === "instructor")) && (
+          <ProfessorWorkspaces
+            classes={classes}
+            workspaces={workspaces}
+            csrf={csrf}
+            onRefresh={onRefresh}
+          />
+        )}
         <div className="onboard-grid">
           <section className="panel onboard-card">
             <span className="onboard-icon">
@@ -300,6 +419,7 @@ export function Onboarding({
                 void act("create", {
                   action: "create",
                   role,
+                  classId: f.get("classId") || undefined,
                   team: f.get("team") ?? "",
                   course: f.get("course"),
                   project: f.get("project"),
@@ -336,8 +456,21 @@ export function Onboarding({
                   </button>
                 ))}
               </div>
+              {role === "instructor" && classes.length > 0 && (
+                <label>
+                  Place this workspace in a class
+                  <select name="classId">
+                    <option value="">Separate workspace</option>
+                    {classes.map((c) => (
+                      <option value={c.id} key={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <label>
-                Class
+                Class name
                 <input
                   name="course"
                   placeholder="CSS 360 · Software engineering"
@@ -441,6 +574,9 @@ export function Onboarding({
                 <span>
                   <strong>{w.project}</strong>
                   <small>
+                    {w.classId
+                      ? `${classes.find((c) => c.id === w.classId)?.name || "Class"} · `
+                      : ""}
                     {w.practice
                       ? "Practice workspace"
                       : `${w.course} · ${w.role === "instructor" ? "Instructor" : "Student"}`}

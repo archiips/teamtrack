@@ -9,6 +9,8 @@ export type User = {
   active?: boolean;
   /** Created this workspace: may edit the brief and checkpoints even as a student. */
   owner?: boolean;
+  /** Explicitly invited professor with read-only access to this workspace. */
+  monitor?: boolean;
   /** GitHub username, to match this person's commits. */
   github?: string;
 };
@@ -40,6 +42,7 @@ export type Task = {
   version: number;
 };
 export type Entry = {
+  attachment?: { id: string; name: string; bytes: number };
   id: string;
   taskId: string;
   actorId: string;
@@ -58,6 +61,7 @@ export type Event = {
   at: string;
 };
 export type State = {
+  workspaceKind?: "group" | "class";
   checkpoints?: { id: string; title: string; due: string }[];
   integration?: { lastSync: string | null; error: string | null };
   version: number;

@@ -142,7 +142,7 @@ await check("switch to instructor practice; steps check off", async () => {
   await S.getByLabel("Contribution or comment").fill(
     "I'll add you to the org today.",
   );
-  await S.getByRole("button", { name: "Share update" }).click();
+  await S.getByRole("button", { name: "Send comment" }).click();
   await toast(S, "Comment added");
   await S.getByRole("button", { name: "Close task" }).click();
   await ticked(S, "Comment on Team Nova");

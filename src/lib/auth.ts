@@ -1,3 +1,4 @@
+import { accountAuthVersion } from "./accounts";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
@@ -17,7 +18,15 @@ export async function createSession(
   account = false,
 ) {
   const csrf = crypto.randomUUID();
-  const token = await new SignJWT({ userId, csrf, namespace, account })
+  const authVersion = account ? await accountAuthVersion(userId) : undefined;
+  if (account && authVersion === undefined) throw Error("Invalid account");
+  const token = await new SignJWT({
+    userId,
+    csrf,
+    namespace,
+    account,
+    authVersion,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(Math.floor(Date.now() / 1000) + lifetime(account))
@@ -49,6 +58,11 @@ export async function session() {
   });
   if (typeof payload.userId !== "string" || typeof payload.csrf !== "string")
     throw Error("Invalid session");
+  if (payload.account === true) {
+    const version = await accountAuthVersion(payload.userId);
+    if (version === undefined || (payload.authVersion ?? 0) !== version)
+      throw Error("Please sign in again");
+  }
   return {
     userId: payload.userId,
     csrf: payload.csrf,

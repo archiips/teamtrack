@@ -85,6 +85,18 @@ Register once for the whole site; after that every team connects its own repo fr
 
 TeamTrack reads only the last 100 commits and recent merged pull requests of the linked repo, cached for 10 minutes and refreshed on push. Linking is verified with the leader's own GitHub sign-in, so a team can only connect repos its leader can access. Local test harness: `tests/e2e/README.md`.
 
+## Team chat and attachments
+
+Each team has one persistent conversation under **Team chat**. Current team members and instructors can read and send; the visibility is labeled in the UI. Removed/inactive members lose access, including downloads. Messages refresh every five seconds while the chat is visible; older history loads on request. This version has no DMs, message editing/deletion, read receipts or file previews.
+
+Task comments and contributions accept private attachments too. `teamtrack_task_file` stores their bytes separately; file metadata, the entry and its activity event save together. Deleting a task removes its file records and releases quota. Normal workspace command requests cannot attach arbitrary file IDs.
+
+Chat uses the existing PostgreSQL connection; no additional service, credentials or package is needed. `teamtrack_chat` and its team/history index are created on first chat access. Messages and private binary attachments are separate from workspace JSON, so normal workspace polling does not transfer file bytes or chat history. File downloads authenticate and recheck current team access every time; there are no public file URLs. All uploads download as attachments rather than rendering in the app origin.
+
+Limits: one file per message, 3 MiB per file, 4,000 characters per message, 50 MiB of attachments per workspace, shared across chat and task updates. At the attachment quota, text and links still work. These limits keep the classroom MVP within the existing function request budget and bound database storage per workspace; monitor total database usage as workspaces grow. Larger files/high-volume use should move attachment bytes to private object storage. The no-database local file-store mode does not support chat.
+
+`demo:reset` clears the synthetic `demo` chat as well as its workspace. Other namespaces are untouched. Deleting a practice workspace on restart cascades to its chat through the database foreign key. Database backups must include `teamtrack_chat` and `teamtrack_task_file`, including `file_data`; copying only `teamtrack_state` does not back up conversations or files.
+
 ## Reset and release
 
 `npm run demo:reset` resets only the standalone `demo` namespace, its demo accounts (they re-create with the current DEMO_PASSWORD on next sign-in; run it after changing the password) and its demo LMS roster link (reconnects on the professor's next LMS launch). It never resets Canvas course workspaces. Use only for rehearsal/presentation preparation, not after collecting real pilot work.
@@ -103,3 +115,13 @@ Manual deploy after checks: `npx vercel --prod --yes`. Automatic GitHub deployme
 Pitch backup: `video/out/teamtrack-demo-short.mp4` (19s) and `video/out/teamtrack-demo.mp4` (60s) show the same flow if Canvas or the network is unavailable (see video/README.md).
 
 Canvas course data is separate from the synthetic demo; demo:reset never touches it. If the embedded frame misbehaves on another browser, the launch also works top-level at `/courses/1/external_tools/2?display=borderless`.
+
+## Email recovery and daily reminders
+
+For the free demo setup, create a Brevo account, verify a sender email under Settings → Senders, and create a sending API key under SMTP & API. Set `BREVO_API_KEY` and `EMAIL_FROM` to that verified email. Brevo may replace the visible sender domain for free email addresses; no custom domain purchase is needed for this setup. Account activation/approval must be complete before live delivery.
+
+Alternatively, set `RESEND_API_KEY` and `EMAIL_FROM` (e.g. `TeamTrack <notifications@your-verified-domain>`), plus `APP_URL` to the canonical HTTPS site URL. Do not commit credentials. Password recovery remains explicitly unavailable until these are configured; it never returns a reset link in an API response. Resets expire in 30 minutes, are single-use, and revoke existing sessions.
+
+Set a random `CRON_SECRET` in Vercel. `vercel.json` schedules `/api/cron/reminders` daily at 16:00 UTC. Vercel supplies `Authorization: Bearer <CRON_SECRET>`. Users opt into a daily email digest per workspace in the bell inbox; in-app reminders work without mail. The daily job skips practice workspaces, rechecks membership, and records delivery to prevent duplicate sends. Provider failures return an error for inspection and can be retried. Brevo is selected when `BREVO_API_KEY` is set; otherwise Resend is used. All email tests use a mocked transport: verify one supervised delivery with a controlled recipient after configuration before enabling real participants.
+
+Professor entry uses the same account credentials; it does not elevate existing workspace permissions. Classes organize separate workspaces. Owners can generate a single-use, seven-day professor monitoring link under Invite, replace unused links, and remove monitoring access. Monitors have read-only access to precisely that workspace. Group identity remains stable when a monitor joins.

@@ -69,7 +69,10 @@ export function person(
  * Instructor workspaces hold any number of teams.
  */
 export function isGroup(s: State) {
-  return !!s.inviteCode && !s.users.some((u) => u.role === "instructor");
+  return s.workspaceKind
+    ? s.workspaceKind === "group"
+    : !!s.inviteCode &&
+        !s.users.some((u) => u.role === "instructor" && !u.monitor);
 }
 /**
  * The team's leader: the one recorded, else the workspace creator if they're on the
@@ -130,6 +133,7 @@ export function blankState(
     step = Math.max(0, end - start) / 4;
   return {
     version: 1,
+    workspaceKind: creator.role === "student" ? "group" : "class",
     inviteCode,
     course,
     project,
@@ -181,6 +185,7 @@ export function apply(original: State, actorId: string, c: Command): State {
   const s = structuredClone(original);
   const u = s.users.find((x) => x.id === actorId);
   if (!u || u.active === false) throw Error("Access denied");
+  if (u.monitor) throw Error("Monitoring access is read-only");
   const instructor = () => {
     if (u.role !== "instructor") throw Error("Instructor access required");
   };

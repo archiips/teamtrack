@@ -11,7 +11,10 @@ New users can open an optional **practice workspace** first (setup screen, avata
 3. Press **Invite** (top right) and share the link or the 8-character code. People who open the link create an account and land in the workspace.
 4. In a student's workspace everyone who joins lands on the team automatically. In an instructor's workspace each student opens **My team** and joins or starts a team; the instructor can also create teams and add or remove people under **Manage**.
 5. Add tasks with an owner and due date, post updates with evidence links, raise blockers, and accept the team agreement.
-6. Each team has a leader (whoever created it). Only the leader proposes agreement changes; a change takes effect when every member approves, and one decline sends it back. The leader can hand leadership to a teammate under **Manage**; in a student's workspace the organizer role goes with it.
+6. Open **Team chat** to coordinate and share files with your team. Messages persist; the conversation is visible to the team and its instructor. Attach one file per message, up to 3 MB (50 MB of attachments per workspace).
+   Task comments and contributions also support an **Attach file** button, including file-only updates. Downloads stay private to the task’s team and instructor.
+
+7. Each team has a leader (whoever created it). Only the leader proposes agreement changes; a change takes effect when every member approves, and one decline sends it back. The leader can hand leadership to a teammate under **Manage**; in a student's workspace the organizer role goes with it.
 
 One account can belong to several workspaces; switch from the avatar menu (top right) or the workspace card in the sidebar. There is no email service: a forgotten password is reset by the operator with `scripts/reset-password.ts` (see the operations guide). Canvas is optional; it works without it.
 
@@ -37,4 +40,6 @@ npm run lint
 npm run build
 ```
 
-`npm run test:integration` checks HTTP authorization and persistence against a running app. `npm run test:accounts` checks sign-up, workspaces, invites and teams over HTTP; it creates accounts, so point `TEST_BASE_URL` at a local server with a local database, never production. See the operations guide before resetting synthetic data or deploying.
+`npm run test:integration` checks HTTP authorization and persistence against a running app. `npm run test:accounts` checks sign-up, workspaces, invites and teams over HTTP; it creates accounts, so point `TEST_BASE_URL` at a local server with a local database, never production. `npm run test:chat` and `node tests/e2e/chat.e2e.mjs` verify chat and private attachments against an isolated local app on port 3100; see `tests/e2e/README.md`. Chat requires PostgreSQL, including locally. See the operations guide before resetting synthetic data or deploying.
+
+Professors can use **Professor login**, organize team workspaces under **Your classes**, and switch among their classes and separately invited workspaces. Workspace owners can create a single-use professor monitoring link under **Invite**; monitoring is read-only and can be revoked there. The bell inbox shows agreement/vote and task reminders. Optional daily email digests and password-reset emails need a configured verified sender (see the operations guide). In chat, Enter sends and Shift+Enter starts a new line.

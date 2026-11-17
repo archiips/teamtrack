@@ -21,6 +21,10 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Folder } from "@/components/folder";
 import { GithubPanel, type GithubData } from "@/components/github-panel";
+import { TaskEntryComposer } from "@/components/task-entry-composer";
+import { type ClassSummary } from "@/components/professor-workspaces";
+import { NotificationInbox } from "@/components/notification-inbox";
+import { TeamChat } from "@/components/team-chat";
 import { PracticeGuide, type PracticeGo } from "@/components/practice-guide";
 import {
   AuthPanel,
@@ -74,7 +78,7 @@ import {
 } from "lucide-react";
 import type { State, Task, User, Command } from "@/lib/types";
 import { attention, isGroup, leaderOf } from "@/lib/domain";
-type View = "overview" | "tasks" | "team" | "agreement" | "activity";
+type View = "overview" | "tasks" | "team" | "agreement" | "activity" | "chat";
 type OpenTeam = { id: string; name: string; size: number };
 const labels = { todo: "To do", in_progress: "In progress", done: "Done" };
 function date(s: string) {
@@ -116,6 +120,8 @@ export default function Page() {
     [openTeams, setOpenTeams] = useState<OpenTeam[]>([]),
     [adding, setAdding] = useState(false),
     [invite, setInvite] = useState(""),
+    [monitorToken, setMonitorToken] = useState(""),
+    [classes, setClasses] = useState<ClassSummary[]>([]),
     [inviteOpen, setInviteOpen] = useState(false),
     [manage, setManage] = useState<string | null>(null),
     [passwordOpen, setPasswordOpen] = useState(false),
@@ -137,12 +143,14 @@ export default function Page() {
     namespace?: string;
     account?: Account;
     workspaces?: WorkspaceSummary[];
+    classes?: ClassSummary[];
     openTeams?: OpenTeam[];
   }) {
     setS(d.state);
     setCsrf(d.csrf);
     setAccount(d.account || null);
     setWorkspaces(d.workspaces || []);
+    setClasses(d.classes || []);
     setOpenTeams(d.openTeams || []);
     setGhEnabled(!!(d as { github?: boolean }).github);
     if (d.userId) setUserId(d.userId);
@@ -174,7 +182,7 @@ export default function Page() {
   // After signing in: an invite link joins that workspace straight away.
   async function afterAuth() {
     const code = invite;
-    if (code) {
+    if (code || monitorToken) {
       const me = await (await fetch("/api/workspace")).json();
       const r = await fetch("/api/workspaces", {
         method: "POST",
@@ -182,10 +190,15 @@ export default function Page() {
           "Content-Type": "application/json",
           "x-csrf-token": me.csrf,
         },
-        body: JSON.stringify({ action: "join", code }),
+        body: JSON.stringify(
+          monitorToken
+            ? { action: "monitor.join", token: monitorToken }
+            : { action: "join", code },
+        ),
       });
       if (r.ok) {
         setInvite("");
+        setMonitorToken("");
         history.replaceState(null, "", "/");
       } else
         setError(
@@ -252,14 +265,16 @@ export default function Page() {
   useMotionGate();
   useEffect(() => {
     const code = new URLSearchParams(location.search).get("join");
+    const monitor = new URLSearchParams(location.search).get("monitor");
     fetch("/api/workspace")
       .then(async (r) => {
+        if (monitor) setMonitorToken(monitor);
         if (code) setInvite(code.toUpperCase());
         if (r.ok) {
           const d = await r.json();
           load(d);
           // Signed in already and opened someone's invite link: offer to join.
-          if (code && d.account && d.state) setAdding(true);
+          if ((code || monitor) && d.account && d.state) setAdding(true);
         }
         // Back from GitHub: linked, failed, or a list of repos to choose from.
         const q = new URLSearchParams(location.search);
@@ -293,6 +308,25 @@ export default function Page() {
       .catch(() => setError("Cannot connect. Please retry."))
       .finally(() => setLoading(false));
   }, []);
+  // Mobile keyboards can shrink the visual viewport without changing CSS dvh.
+  useEffect(() => {
+    if (view !== "chat") return;
+    const viewport = window.visualViewport;
+    const resize = () =>
+      document.documentElement.style.setProperty(
+        "--chat-viewport-height",
+        `${viewport?.height || window.innerHeight}px`,
+      );
+    resize();
+    window.scrollTo(0, 0);
+    viewport?.addEventListener("resize", resize);
+    window.addEventListener("resize", resize);
+    return () => {
+      viewport?.removeEventListener("resize", resize);
+      window.removeEventListener("resize", resize);
+      document.documentElement.style.removeProperty("--chat-viewport-height");
+    };
+  }, [view]);
   // Repo activity for the teams this person can see; reloads when links change.
   const linked = s?.teams
     .map((t) => t.github?.repo || "")
@@ -380,6 +414,36 @@ export default function Page() {
       setBusy(false);
     }
   }
+  async function uploadTaskEntry(form: FormData) {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await fetch("/api/task-entries", {
+        method: "POST",
+        headers: { "x-csrf-token": csrf },
+        body: form,
+      });
+      const d = await r.json();
+      if (!r.ok)
+        throw Error(
+          d.error || "Could not upload this file. Your draft is kept.",
+        );
+      setS(d.state);
+      if (d.openTeams) setOpenTeams(d.openTeams);
+      setToast("Update and attachment shared");
+      setCheer((n) => n + 1);
+      return true;
+    } catch (e) {
+      setError(
+        e instanceof TypeError
+          ? "Could not connect. Your draft is kept; please retry."
+          : (e as Error).message,
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
   if (loading)
     return (
       <main className="loading">
@@ -396,9 +460,18 @@ export default function Page() {
       <Onboarding
         account={account}
         workspaces={workspaces}
+        classes={classes}
+        monitorToken={monitorToken}
+        onRefresh={refresh}
         csrf={csrf}
         invite={invite}
-        onDone={afterAuth}
+        onDone={async () => {
+          setAdding(false);
+          setInvite("");
+          setMonitorToken("");
+          history.replaceState(null, "", "/");
+          await refresh();
+        }}
         onBack={s ? () => setAdding(false) : undefined}
         onSignOut={signOut}
       />
@@ -446,7 +519,7 @@ export default function Page() {
     );
   const me = s.users.find((u) => u.id === userId)!,
     prof = me.role === "instructor",
-    organizer = prof || !!me.owner,
+    organizer = !me.monitor && (prof || !!me.owner),
     group = isGroup(s),
     ghOn = ghEnabled && !s.practice,
     // Practice: views visited so far (stored), plus the one open now.
@@ -516,6 +589,7 @@ export default function Page() {
       short: "Agreement",
       icon: FileCheck2,
     },
+    { id: "chat", name: "Team chat", short: "Chat", icon: MessageSquare },
     { id: "activity", name: "Activity", short: "Activity", icon: Activity },
   ] as const;
   const open = all.filter((t) => t.status !== "done"),
@@ -671,7 +745,9 @@ export default function Page() {
             : ["Better, ", "together", "."]
           : view === "agreement"
             ? ["Start on the ", "same page", "."]
-            : ["The story of ", "your work", "."];
+            : view === "chat"
+              ? ["Keep the ", "conversation", " going."]
+              : ["The story of ", "your work", "."];
   function taskRow(t: Task) {
     const owner = s!.users.find((u) => u.id === t.ownerId);
     return (
@@ -709,7 +785,7 @@ export default function Page() {
     );
   }
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${view === "chat" ? "chat-open" : ""}`}>
       <aside className="sidebar">
         <Link className="brand" href="/" aria-label="TeamTrack home">
           <Logo size={30} />
@@ -864,6 +940,18 @@ export default function Page() {
             >
               <RefreshCw size={17} />
             </button>
+            <NotificationInbox
+              key={`${namespace}:${userId}`}
+              state={s}
+              userId={userId}
+              namespace={namespace}
+              csrf={csrf}
+              onOpen={(target, tid, taskId) => {
+                setTeamId(tid);
+                setView(target);
+                if (taskId) setSelected(taskId);
+              }}
+            />
             <ThemeToggle />
             <div className="account-wrap">
               <button
@@ -971,7 +1059,9 @@ export default function Page() {
                       ? "Different strengths, one shared goal."
                       : view === "agreement"
                         ? "A shared understanding of how your team works together."
-                        : "Meaningful changes, recorded with the people behind them."}
+                        : view === "chat"
+                          ? "A shared place to talk things through and send your team a file."
+                          : "Meaningful changes, recorded with the people behind them."}
               </p>
             </div>
             {view === "overview" && !dismissed && (
@@ -1017,7 +1107,7 @@ export default function Page() {
                 )}
               </div>
             )}
-            {prof && !s.teams.length && view !== "team" ? (
+            {me.monitor ? null : prof && !s.teams.length && view !== "team" ? (
               <button className="primary" onClick={() => setNewTeam(true)}>
                 <Plus size={17} />
                 Create team
@@ -1110,7 +1200,7 @@ export default function Page() {
                 </button>
               </div>
             )}
-          {prof && s.integration && (
+          {prof && !me.monitor && s.integration && (
             <div className="roster-status">
               <span>
                 {s.integration?.error ||
@@ -1175,10 +1265,15 @@ export default function Page() {
               )}
             </div>
           </div>
+          {me.monitor && (
+            <p className="form-note" role="status">
+              Professor monitoring · Read-only access to this workspace
+            </p>
+          )}
           <div className="view-enter" key={view}>
             {view === "overview" && (
               <>
-                <div className="stats">
+                <div className="stats stats-summary">
                   <div className="hero-stat">
                     <Ring pct={all.length ? (done / all.length) * 100 : 0} />
                     <div>
@@ -1195,7 +1290,7 @@ export default function Page() {
                   </div>
                   <div>
                     <span>
-                      Moving forward
+                      Tasks in progress
                       <i className="stat-icon blue">
                         <Clock3 size={17} />
                       </i>
@@ -1211,7 +1306,7 @@ export default function Page() {
                   </div>
                   <div className={blocked ? "alert-stat" : ""}>
                     <span>
-                      Needs a hand
+                      Blocked tasks
                       <i className="stat-icon amber">
                         <Flag size={17} />
                       </i>
@@ -1228,7 +1323,9 @@ export default function Page() {
                   </div>
                   <div className="cream-stat">
                     <span>
-                      {prof ? "Teams connected" : "Team agreement"}
+                      {prof
+                        ? "Teams in this workspace"
+                        : "Agreement acceptances"}
                       <i className="stat-icon cream">
                         <Users size={17} />
                       </i>
@@ -1738,7 +1835,7 @@ export default function Page() {
                     ? `${unassigned.length} student${unassigned.length === 1 ? " is" : "s are"} waiting for one.`
                     : "Invite students, then group them, or let them start their own."}
                   <span className="empty-actions">
-                    {s.inviteCode && (
+                    {s.inviteCode && !me.monitor && (
                       <button
                         className="secondary"
                         onClick={() => setInviteOpen(true)}
@@ -1803,6 +1900,7 @@ export default function Page() {
                         </div>
                         <button
                           className="secondary"
+                          disabled={!!me.monitor}
                           onClick={() => setManage(t.id)}
                         >
                           <Settings2 size={15} />
@@ -1877,11 +1975,14 @@ export default function Page() {
               <section className="panel">
                 <div className="empty">
                   <FileCheck2 />
-                  {prof
-                    ? "Each team writes its own agreement. Create a team first."
-                    : "Your team agreement appears once you’re on a team."}
+                  {me.monitor
+                    ? "No team agreement yet. The workspace organizer can create a team."
+                    : prof
+                      ? "Each team writes its own agreement. Create a team first."
+                      : "Your team agreement appears once you’re on a team."}
                   <button
                     className="primary"
+                    disabled={!!me.monitor}
                     onClick={() => (prof ? setNewTeam(true) : setView("team"))}
                   >
                     {prof ? "Create a team" : "Find your team"}
@@ -2174,6 +2275,29 @@ export default function Page() {
                 </section>
               </div>
             )}
+            {view === "chat" &&
+              (team ? (
+                <TeamChat
+                  key={`${namespace}:${team.id}:${userId}`}
+                  team={team}
+                  readOnly={!!me.monitor}
+                  userId={userId}
+                  csrf={csrf}
+                />
+              ) : (
+                <section className="panel">
+                  <div className="empty">
+                    <MessageSquare />
+                    Join or create a team to start a conversation.
+                    <button
+                      className="secondary"
+                      onClick={() => setView("team")}
+                    >
+                      Find your team
+                    </button>
+                  </div>
+                </section>
+              ))}
             {view === "activity" && (
               <div className={ghOn && team ? "activity-grid" : ""}>
                 <section className="panel activity-panel">
@@ -2219,7 +2343,7 @@ export default function Page() {
                     team={team}
                     s={s}
                     userId={userId}
-                    canManage={prof || leadId === userId}
+                    canManage={!me.monitor && (prof || leadId === userId)}
                     data={ghData[team.id]}
                     busy={busy}
                     avatar={(u) => <Avatar user={u} small />}
@@ -2264,7 +2388,7 @@ export default function Page() {
           {toast}
         </div>
       )}
-      {!dismissed && (
+      {!dismissed && view !== "chat" && (
         <div
           className={`companion-wrap ${view === "overview" ? "on-overview" : ""}`}
           onKeyDown={(e) => {
@@ -2310,6 +2434,7 @@ export default function Page() {
           userId={userId}
           busy={busy}
           onClose={() => setSelected(null)}
+          upload={uploadTaskEntry}
           command={command}
         />
       )}
@@ -2686,6 +2811,9 @@ export default function Page() {
       )}
       {inviteOpen && s.inviteCode && (
         <InviteModal
+          csrf={csrf}
+          monitors={s.users.filter((u) => u.monitor && u.active !== false)}
+          onRefresh={refresh}
           code={s.inviteCode}
           canRotate={organizer}
           group={group}
@@ -2705,7 +2833,7 @@ export default function Page() {
           if (!t) return null;
           const people = s.users.filter((u) => t.memberIds.includes(u.id)),
             lead = leaderOf(s, t),
-            canLead = prof || lead === userId;
+            canLead = !me.monitor && (prof || lead === userId);
           return (
             <Modal
               error={error}
@@ -2775,7 +2903,7 @@ export default function Page() {
                       Make leader
                     </button>
                   )}
-                  {prof && (
+                  {prof && !me.monitor && (
                     <button
                       className="text-button danger"
                       disabled={busy}
@@ -2793,7 +2921,7 @@ export default function Page() {
                 </div>
               ))}
               {!people.length && <p className="form-note">No members yet.</p>}
-              {prof && unassigned.length > 0 && (
+              {prof && !me.monitor && unassigned.length > 0 && (
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
@@ -2893,6 +3021,9 @@ function CheckpointTrack({
   );
 }
 function InviteModal({
+  csrf,
+  monitors,
+  onRefresh,
   code,
   group,
   canRotate,
@@ -2900,6 +3031,9 @@ function InviteModal({
   onRotate,
   onClose,
 }: {
+  csrf: string;
+  monitors: User[];
+  onRefresh: () => Promise<void>;
   code: string;
   group: boolean;
   canRotate: boolean;
@@ -2908,6 +3042,24 @@ function InviteModal({
   onClose: () => void;
 }) {
   const [copied, setCopied] = useState("");
+  const [monitorLink, setMonitorLink] = useState(""),
+    [inviteError, setInviteError] = useState("");
+  async function monitorAction(body: unknown) {
+    setInviteError("");
+    try {
+      const r = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-csrf-token": csrf },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!r.ok) throw Error(d.error);
+      if (d.token) setMonitorLink(`${location.origin}/?monitor=${d.token}`);
+      else await onRefresh();
+    } catch (e) {
+      setInviteError((e as Error).message);
+    }
+  }
   const pretty = code.slice(0, 4) + "-" + code.slice(4);
   const link = `${location.origin}/?join=${code}`;
   const copy = async (what: string, value: string) => {
@@ -2942,6 +3094,56 @@ function InviteModal({
         </button>
       </div>
       <p className="form-note">{link}</p>
+      {canRotate && (
+        <section>
+          <h3>Invite a professor to monitor</h3>
+          <p className="form-note">
+            Read-only access to this workspace. Each link works once and expires
+            after seven days. Creating a new link replaces the unused one.
+          </p>
+          <button
+            className="secondary"
+            onClick={() => monitorAction({ action: "monitor.invite" })}
+          >
+            Create professor invite link
+          </button>
+          {monitorLink && (
+            <label>
+              Professor invitation
+              <input
+                aria-label="Professor invitation"
+                readOnly
+                value={monitorLink}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <button
+                className="text-button"
+                onClick={() => copy("monitor", monitorLink)}
+              >
+                {copied === "monitor" ? "Copied" : "Copy professor link"}
+              </button>
+            </label>
+          )}
+          {monitors.map((u) => (
+            <p key={u.id}>
+              {u.name}{" "}
+              <button
+                className="text-button"
+                onClick={() =>
+                  monitorAction({ action: "monitor.remove", userId: u.id })
+                }
+              >
+                Remove monitoring access
+              </button>
+            </p>
+          ))}
+          {inviteError && (
+            <p className="error" role="alert">
+              {inviteError}
+            </p>
+          )}
+        </section>
+      )}
       {canRotate && (
         <button
           className="text-button"
@@ -3083,6 +3285,7 @@ function TaskDrawer({
   busy,
   onClose,
   command,
+  upload,
 }: {
   error?: string;
   task: Task;
@@ -3091,11 +3294,9 @@ function TaskDrawer({
   busy: boolean;
   onClose: () => void;
   command: (c: Command, m?: string) => Promise<boolean>;
+  upload: (form: FormData) => Promise<boolean>;
 }) {
   const ref = useRef<HTMLDialogElement>(null),
-    [body, setBody] = useState(""),
-    [url, setUrl] = useState(""),
-    [kind, setKind] = useState("contribution"),
     [blocker, setBlocker] = useState(task.blocker);
   useEffect(() => {
     const d = ref.current;
@@ -3123,7 +3324,10 @@ function TaskDrawer({
           <X size={21} />
         </button>
       </div>
-      <div className="drawer-content">
+      <fieldset
+        className="drawer-content task-edit-fields"
+        disabled={!!s.users.find((u) => u.id === userId)?.monitor}
+      >
         {error && (
           <div className="error-banner" role="alert">
             {error}
@@ -3296,81 +3500,13 @@ function TaskDrawer({
             Visible to your team & instructor
           </span>
         </div>
-        <form
-          className="update-form"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (
-              await command(
-                {
-                  type:
-                    kind === "contribution"
-                      ? "contribution.add"
-                      : "comment.add",
-                  taskId: task.id,
-                  body,
-                  url,
-                },
-                kind === "contribution"
-                  ? "Contribution recorded"
-                  : "Comment added",
-              )
-            ) {
-              setBody("");
-              setUrl("");
-            }
-          }}
-        >
-          <div className="tabs">
-            <button
-              type="button"
-              className={kind === "contribution" ? "selected" : ""}
-              onClick={() => setKind("contribution")}
-            >
-              Contribution
-            </button>
-            <button
-              type="button"
-              className={kind === "comment" ? "selected" : ""}
-              onClick={() => setKind("comment")}
-            >
-              Comment
-            </button>
-          </div>
-          <textarea
-            aria-label="Contribution or comment"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={
-              kind === "contribution"
-                ? "What did you work on? What did you learn?"
-                : "Share a thought or help your teammate."
-            }
-            required
-            maxLength={4000}
-          />
-          {kind === "contribution" && (
-            <label className="evidence-url">
-              <Link2 size={16} />
-              <input
-                aria-label="Evidence link"
-                type="url"
-                placeholder="Evidence link (optional, https://…)"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-              />
-            </label>
-          )}
-          <div className="update-bottom">
-            <small>
-              Attributed to {s.users.find((u) => u.id === userId)?.name}
-            </small>
-            <button className="primary" disabled={busy || !body.trim()}>
-              Share update
-              <ArrowUpRight size={15} />
-            </button>
-          </div>
-        </form>
+        <TaskEntryComposer
+          taskId={task.id}
+          name={s.users.find((u) => u.id === userId)?.name || "You"}
+          busy={busy}
+          command={command}
+          upload={upload}
+        />
         <div className="entries">
           {s.entries
             .filter((e) => e.taskId === task.id)
@@ -3392,6 +3528,23 @@ function TaskDrawer({
                       <Link2 size={14} />
                       View supporting work
                       <ExternalLink size={13} />
+                    </a>
+                  )}
+                  {e.attachment && (
+                    <a
+                      className="task-attachment"
+                      href={`/api/task-entries/files/${e.attachment.id}`}
+                      download={e.attachment.name}
+                    >
+                      <Link2 size={15} />
+                      <span>
+                        {e.attachment.name}
+                        <small>
+                          {Math.max(1, Math.ceil(e.attachment.bytes / 1024))} KB
+                          · Download file
+                        </small>
+                      </span>
+                      <ExternalLink size={14} />
                     </a>
                   )}
                   <time>{new Date(e.at).toLocaleString()}</time>
@@ -3440,7 +3593,7 @@ function TaskDrawer({
               </p>
             ))}
         </details>
-      </div>
+      </fieldset>
     </dialog>
   );
 }

@@ -14,7 +14,7 @@ function demoPassword() {
   return p || "teamtrack474";
 }
 const demoEnabled = () => process.env.DEMO_MODE !== "false";
-function hash(password: string) {
+export function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   return salt + ":" + scryptSync(password, salt, 32).toString("hex");
 }
@@ -35,6 +35,7 @@ export async function accountTables() {
     await sql`CREATE TABLE IF NOT EXISTS teamtrack_account (email text PRIMARY KEY, user_id text NOT NULL, namespace text NOT NULL, password_hash text NOT NULL)`;
     // Own accounts: one person, any number of workspaces.
     await sql`CREATE TABLE IF NOT EXISTS teamtrack_user (id text PRIMARY KEY, email text UNIQUE NOT NULL, name text NOT NULL, password_hash text NOT NULL, created_at timestamptz NOT NULL DEFAULT now())`;
+    await sql`ALTER TABLE teamtrack_user ADD COLUMN IF NOT EXISTS auth_version integer NOT NULL DEFAULT 0`;
     await sql`CREATE TABLE IF NOT EXISTS teamtrack_member (user_id text NOT NULL, namespace text NOT NULL, joined_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (user_id, namespace))`;
     await sql`CREATE TABLE IF NOT EXISTS teamtrack_invite (code text PRIMARY KEY, namespace text UNIQUE NOT NULL)`;
   })();
@@ -49,7 +50,7 @@ async function demoAccount(email: string) {
   // Demo accounts are created on first use, so they come back after demo:reset clears them.
   const demo = seed().users.find((u) => u.email === email);
   if (!rows[0] && demo) {
-    await db`INSERT INTO teamtrack_account VALUES (${email},${demo.id},'demo',${hash(demoPassword())}) ON CONFLICT DO NOTHING`;
+    await db`INSERT INTO teamtrack_account VALUES (${email},${demo.id},'demo',${hashPassword(demoPassword())}) ON CONFLICT DO NOTHING`;
     rows = await find();
   }
   return rows[0];
@@ -126,7 +127,7 @@ export async function createAccount(
   const db = await accountTables();
   const id = "u_" + randomUUID().replaceAll("-", "").slice(0, 16);
   const rows =
-    await db`INSERT INTO teamtrack_user (id,email,name,password_hash) VALUES (${id},${address},${n},${hash(password)}) ON CONFLICT (email) DO NOTHING RETURNING id`;
+    await db`INSERT INTO teamtrack_user (id,email,name,password_hash) VALUES (${id},${address},${n},${hashPassword(password)}) ON CONFLICT (email) DO NOTHING RETURNING id`;
   if (!rows[0])
     throw Error("An account with this email already exists. Sign in instead.");
   return id;
@@ -152,13 +153,20 @@ export async function changePassword(
     await db`SELECT password_hash FROM teamtrack_user WHERE id=${userId}`;
   if (!rows[0] || !matches(current, rows[0].password_hash))
     throw Error("Your current password is not right");
-  await db`UPDATE teamtrack_user SET password_hash=${hash(next)} WHERE id=${userId}`;
+  await db`UPDATE teamtrack_user SET password_hash=${hashPassword(next)} WHERE id=${userId}`;
 }
 
 /** Operator reset (scripts/reset-password.ts). Returns false when no account uses the email. */
 export async function setPassword(email: string, password: string) {
   const db = await accountTables();
   const rows =
-    await db`UPDATE teamtrack_user SET password_hash=${hash(password)} WHERE email=${email.trim().toLowerCase()} RETURNING id`;
+    await db`UPDATE teamtrack_user SET password_hash=${hashPassword(password)} WHERE email=${email.trim().toLowerCase()} RETURNING id`;
   return rows.length > 0;
+}
+
+export async function accountAuthVersion(userId: string) {
+  const db = await accountTables();
+  const rows =
+    await db`SELECT auth_version FROM teamtrack_user WHERE id=${userId}`;
+  return rows[0]?.auth_version as number | undefined;
 }
