@@ -1,4 +1,5 @@
 "use client";
+import "./task-detail.css";
 import { useRef, useState } from "react";
 import { ArrowUpRight, Link2, Paperclip, X } from "lucide-react";
 import { MAX_FILE_BYTES } from "@/lib/chat-types";
@@ -82,10 +83,11 @@ export function TaskEntryComposer({
         }
       }}
     >
-      <div className="tabs">
+      <div className="composer-kind" aria-label="Update type">
         <button
           type="button"
           disabled={busy}
+          aria-pressed={kind === "contribution"}
           className={kind === "contribution" ? "selected" : ""}
           onClick={() => {
             if (kind !== "contribution") {
@@ -99,6 +101,7 @@ export function TaskEntryComposer({
         <button
           type="button"
           disabled={busy}
+          aria-pressed={kind === "comment"}
           className={kind === "comment" ? "selected" : ""}
           onClick={() => {
             if (kind !== "comment") {
@@ -125,6 +128,7 @@ export function TaskEntryComposer({
         required={!file}
         readOnly={busy}
         maxLength={4000}
+        rows={3}
       />
       {kind === "contribution" && (
         <label className="evidence-url">
@@ -165,28 +169,28 @@ export function TaskEntryComposer({
           </button>
         </div>
       )}
-      <div className="task-file-controls">
-        <input
-          ref={picker}
-          type="file"
-          className="sr-only"
-          aria-label="Attach a file to this task update"
-          disabled={busy}
-          onChange={(e) => choose(e.target.files?.[0] || null)}
-        />
-        <button
-          type="button"
-          className="secondary"
-          disabled={busy}
-          onClick={() => picker.current?.click()}
-        >
-          <Paperclip size={15} />
-          Attach file
-        </button>
-        <small>One file, up to 3 MB</small>
-      </div>
       <div className="update-bottom">
-        <small>Attributed to {name}</small>
+        <div className="task-file-controls">
+          <input
+            ref={picker}
+            type="file"
+            className="sr-only"
+            aria-label="Attach a file to this task update"
+            disabled={busy}
+            onChange={(e) => choose(e.target.files?.[0] || null)}
+          />
+          <button
+            type="button"
+            className="text-button"
+            disabled={busy}
+            onClick={() => picker.current?.click()}
+          >
+            <Paperclip size={15} />
+            Attach file
+          </button>
+          <small>Up to 3 MB</small>
+        </div>
+
         <button
           type="submit"
           className="primary"
@@ -200,6 +204,9 @@ export function TaskEntryComposer({
           <ArrowUpRight size={15} />
         </button>
       </div>
+      <small className="composer-attribution">
+        Posting as {name} · Visible to your team and instructor
+      </small>
     </form>
   );
 }

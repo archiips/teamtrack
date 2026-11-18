@@ -1,0 +1,266 @@
+/* A compact task sheet: properties, update composer, and conversation. */
+.task-detail-drawer {
+  width: min(650px, 100%);
+  background: var(--c5);
+}
+.task-detail-drawer .drawer-top {
+  padding: 14px 24px;
+  background: var(--c5);
+}
+.task-detail-drawer .drawer-top .icon-button {
+  border: 0;
+  box-shadow: none;
+  min-width: 36px;
+  min-height: 36px;
+}
+.task-detail-drawer .drawer-content {
+  padding: 26px;
+}
+.task-detail-drawer h2 {
+  font-size: 25px;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.task-detail-drawer .description {
+  margin-top: 0;
+  line-height: 1.65;
+  font-size: 13px;
+}
+.task-detail-drawer .task-history {
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  font-size: 12px;
+}
+.task-detail-drawer .task-history > summary {
+  color: var(--c125);
+  padding: 8px 0;
+  cursor: pointer;
+}
+.task-detail-drawer .task-properties {
+  margin: 16px 0;
+  padding: 16px 0;
+  gap: 16px;
+}
+.task-detail-drawer .task-properties label,
+.task-detail-drawer .task-properties > div {
+  gap: 7px;
+  font-size: 11px;
+}
+.task-detail-drawer .task-properties select {
+  font-size: 12px;
+  min-height: 36px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--c5);
+}
+.task-detail-drawer .task-properties strong {
+  font-size: 12px;
+}
+.task-detail-drawer .task-blocker {
+  padding: 0;
+  border: 0;
+  background: none;
+  margin: 0 0 22px;
+  border-radius: 0;
+}
+.task-blocker > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--c125);
+  padding: 8px 0;
+  list-style: none;
+}
+.task-blocker[open] > summary {
+  color: var(--c130);
+  margin-bottom: 8px;
+}
+.task-blocker summary::-webkit-details-marker {
+  display: none;
+}
+.task-blocker form {
+  padding: 12px;
+  border: 1px solid var(--c6);
+  border-radius: 10px;
+  background: var(--c31);
+}
+.task-detail-drawer .evidence-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.task-detail-drawer .evidence-heading h3 {
+  font-size: 16px;
+}
+.task-detail-drawer .evidence-heading > span {
+  font-size: 10px;
+  margin: 0;
+}
+.task-entry-composer {
+  background: var(--c5);
+  border: 1px solid var(--c57);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.composer-kind {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px 0;
+}
+.composer-kind button {
+  border: 0;
+  box-shadow: none;
+  background: none;
+  color: var(--c125);
+  font-size: 12px;
+  padding: 8px 11px;
+  min-height: 34px;
+  border-radius: 7px;
+}
+.composer-kind button.selected {
+  background: var(--c8);
+  color: var(--ink);
+}
+.task-entry-composer textarea {
+  display: block;
+  background: transparent;
+  min-height: 86px;
+  padding: 14px 16px 8px;
+  font-size: 13px;
+  line-height: 1.65;
+  resize: vertical;
+  box-shadow: none;
+}
+.task-entry-composer .evidence-url {
+  padding: 0 16px;
+  gap: 6px;
+}
+.task-entry-composer .evidence-url input {
+  font-size: 12px;
+  background: none;
+  padding: 8px 0;
+  box-shadow: none;
+  min-width: 0;
+}
+.task-entry-composer .update-bottom {
+  background: none;
+  border-top: 1px solid var(--c6);
+  padding: 10px 12px;
+  align-items: center;
+  gap: 10px;
+}
+.task-entry-composer .task-file-controls {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.task-entry-composer .task-file-controls button {
+  font-size: 12px;
+  min-height: 36px;
+  padding: 5px;
+}
+.task-entry-composer .task-file-controls > small {
+  font-size: 10px;
+}
+.task-entry-composer .update-bottom > .primary {
+  min-height: 38px;
+  font-size: 12px;
+  padding: 8px 13px;
+  box-shadow: none;
+}
+.composer-attribution {
+  display: block;
+  padding: 0 16px 12px;
+  font-size: 10px;
+  color: var(--c125);
+}
+.task-entry-composer .task-pending-file {
+  margin: 8px 14px;
+  padding: 9px 10px;
+  background: var(--c31);
+  border-radius: 8px;
+}
+.task-detail-drawer .entries {
+  margin-top: 24px;
+}
+.task-detail-drawer .entry {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--c6);
+  gap: 12px;
+}
+.task-detail-drawer .entry strong {
+  font-size: 13px;
+}
+.task-detail-drawer .entry header span {
+  font-size: 10px;
+  border: 0;
+  background: var(--c31);
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+.task-detail-drawer .entry p {
+  font-size: 13px;
+  line-height: 1.65;
+  margin: 8px 0;
+}
+.task-detail-drawer .entry time {
+  font-size: 10px;
+  color: var(--c125);
+  margin-top: 8px;
+}
+.task-detail-drawer .entry .task-attachment {
+  padding: 10px 12px;
+  background: var(--c31);
+  border: 0;
+  border-radius: 8px;
+  margin: 10px 0;
+  font-size: 12px;
+}
+.task-detail-drawer .task-attachment small {
+  font-size: 10px;
+}
+@media (max-width: 520px) {
+  .task-detail-drawer .drawer-content {
+    padding: 20px 16px;
+  }
+  .task-detail-drawer .drawer-top {
+    padding: 12px 16px;
+  }
+  .task-detail-drawer .task-properties {
+    grid-template-columns: 1fr 1.2fr;
+    gap: 12px;
+  }
+  .task-properties > div:last-child {
+    grid-column: 1/-1;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .task-detail-drawer .task-properties strong {
+    padding-top: 0;
+  }
+  .task-entry-composer .task-file-controls > small {
+    display: none;
+  }
+  .task-detail-drawer .evidence-heading > span {
+    display: none;
+  }
+  .task-entry-composer .update-bottom {
+    padding: 9px;
+  }
+  .task-entry-composer .update-bottom > .primary {
+    padding: 8px 10px;
+  }
+  .composer-attribution {
+    font-size: 9px;
+  }
+}

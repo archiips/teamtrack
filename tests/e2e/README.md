@@ -71,3 +71,7 @@ Browser checks: `node tests/e2e/feedback.e2e.mjs`, `node tests/e2e/professor.e2e
 ## Account and workspace access isolation
 
 `DATABASE_URL=postgres://tt@127.0.0.1:54349/teamtrack TEST_BASE_URL=http://localhost:3100 npx vitest run tests/workspace-access-api.test.ts` verifies unrelated account lists/switches, chat/file boundaries, token tampering and access revocation against the exact disposable database. `node tests/e2e/account-isolation.e2e.mjs` delays refresh and logout to check that an old account cannot repopulate a newly signed-in session. These fixtures create synthetic local accounts only.
+
+## Monitor an existing team in a professor class
+
+`TEST_BASE_URL=http://localhost:3100 npx vitest run tests/professor-monitoring-api.test.ts` checks ordinary single-team member invitations, atomic class placement, failed placement preserving the invitation, foreign-class rejection, class student scope and private practice sharing rejection. `node tests/e2e/monitoring-flow.e2e.mjs` follows a member sharing a professor invitation through professor sign-in, class selection and read-only access to the original project. It checks the mobile primary action without auto-scrolling. `node tests/e2e/task-detail-ui.e2e.mjs` checks the compact task drawer, initial submit visibility, blockers and comment attachments in dark desktop/mobile layouts. Screenshots are written to `/tmp/teamtrack-new-*.png` and `/tmp/teamtrack-task-detail-*.png`.

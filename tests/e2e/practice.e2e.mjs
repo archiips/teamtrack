@@ -72,6 +72,7 @@ await check("step 2: share an update with a link", async () => {
   await toast(S, "Contribution recorded");
 });
 await check("step 3: raise a blocker", async () => {
+  await S.getByText("Add a blocker", { exact: true }).click();
   await S.getByLabel("Blocker explanation").fill("Need the class email list");
   await S.locator(".blocker-box").getByRole("button", { name: "Save" }).click();
   await toast(S, "Blocker recorded");
@@ -121,19 +122,24 @@ await check(
   "finish practice with no real workspace → setup screen",
   async () => {
     await S.getByRole("button", { name: "Finish practice" }).click();
-    await S.getByText("Create a workspace").waitFor();
+    await S.getByRole("heading", {
+      name: "Create a workspace",
+      exact: true,
+    }).waitFor();
     if (await S.getByText("New here? Practice first.").count())
       throw Error("offer shown while practice exists");
     await S.locator(".workspace-row", {
-      hasText: "Practice workspace",
+      hasText: "Your private practice",
     }).waitFor();
   },
 );
 await check("switch to instructor practice; steps check off", async () => {
-  await S.locator(".workspace-row", { hasText: "Practice workspace" }).click();
+  await S.locator(".workspace-row", {
+    hasText: "Your private practice",
+  }).click();
   await S.locator(".practice-guide").waitFor();
   await S.getByRole("button", { name: "Try it as an instructor" }).click();
-  await S.getByText("Practice as an instructor").waitFor();
+  await S.getByText("Private practice as an instructor").waitFor();
   await S.getByText("0 of 5 tried").waitFor();
   await S.locator(".progress-row", { hasText: "Team Nova" }).click();
   await ticked(S, "Open Team Nova");

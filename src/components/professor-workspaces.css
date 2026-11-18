@@ -1,0 +1,366 @@
+/* Monitoring is the primary professor journey; creating new work is secondary. */
+.prof-hub {
+  display: grid;
+  gap: 28px;
+  margin: 24px 0;
+}
+.prof-invite-panel {
+  background: var(--c5);
+  border: 1px solid var(--c6);
+  border-radius: 16px;
+  padding: 26px;
+}
+.prof-panel-heading {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+.prof-panel-heading > svg {
+  color: var(--blue);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.prof-panel-heading h2,
+.prof-class-list h2 {
+  font-size: 21px;
+  letter-spacing: -0.5px;
+}
+.prof-panel-heading p,
+.prof-class-list > header p {
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 68ch;
+  color: var(--c125);
+  margin-top: 7px;
+}
+.prof-invite-panel form {
+  display: grid;
+  gap: 16px;
+}
+.prof-invite-panel label,
+.prof-new-class label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--c125);
+}
+.prof-invite-panel input,
+.prof-invite-panel select {
+  min-height: 44px;
+  font-size: 14px;
+}
+.prof-placement {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.prof-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 4px;
+}
+.prof-form-footer small {
+  max-width: 38ch;
+  color: var(--c125);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.prof-form-footer .primary {
+  flex-shrink: 0;
+  min-height: 44px;
+}
+.prof-invite-notice {
+  padding: 14px 16px;
+  border-left: 3px solid var(--c3);
+  background: var(--c31);
+  border-radius: 0 8px 8px 0;
+  line-height: 1.65;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+.prof-class-list > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.prof-class-list > header button {
+  flex-shrink: 0;
+}
+.prof-new-class {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.prof-new-class label {
+  flex: 1;
+}
+.prof-class {
+  background: var(--c5);
+  border: 1px solid var(--c6);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-top: 16px;
+}
+.prof-class > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--c6);
+}
+.prof-class h3 {
+  font-size: 16px;
+}
+.prof-class header > span {
+  font-size: 12px;
+  color: var(--c125);
+}
+.prof-class-empty {
+  padding: 20px;
+  font-size: 13px;
+  color: var(--c125);
+  line-height: 1.6;
+}
+.prof-team-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 4px 16px;
+  border-bottom: 1px solid var(--c6);
+}
+.prof-team-row:last-child {
+  border-bottom: 0;
+}
+.prof-team-open {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 13px;
+  border: 0;
+  background: none;
+  padding: 15px 3px;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+}
+.prof-team-open > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.prof-team-open strong {
+  display: block;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.prof-team-open small {
+  display: block;
+  font-size: 11px;
+  color: var(--c125);
+  margin-top: 5px;
+}
+.prof-team-icon {
+  color: var(--blue);
+  background: var(--c8);
+  border-radius: 9px;
+  padding: 9px;
+  display: flex;
+}
+.prof-team-row select {
+  width: 190px;
+  font-size: 12px;
+  padding: 9px;
+}
+.prof-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 35px 24px;
+  border: 1px dashed var(--c57);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--c125);
+}
+.prof-empty > svg {
+  color: var(--c3);
+}
+.prof-empty strong {
+  color: var(--ink);
+}
+.prof-empty p {
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 45ch;
+}
+.workspace-create-options {
+  margin-top: 8px;
+  min-width: 0;
+}
+.workspace-create-options > summary {
+  cursor: pointer;
+  padding: 15px 0;
+  font-size: 13px;
+  color: var(--c125);
+}
+.workspace-create-options > section {
+  margin-top: 10px;
+}
+.onboard-grid:has(.workspace-create-options:only-child) {
+  display: block;
+}
+.invite-kind {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 22px 0;
+}
+.invite-kind button {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 6px 9px;
+  align-items: center;
+  text-align: left;
+  padding: 14px;
+  background: var(--c5);
+  border: 1px solid var(--c6);
+  border-radius: 12px;
+  color: var(--ink);
+  font-size: 14px;
+}
+.invite-kind button small {
+  grid-column: 2;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--c125);
+  line-height: 1.5;
+}
+.invite-kind .selected {
+  border-color: var(--c3);
+  background: var(--c8);
+}
+.invite-panel h3 {
+  font-size: 18px;
+}
+.invite-panel > p {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--c125);
+  margin: 10px 0 18px;
+}
+.invite-panel .invite-code {
+  margin: 20px 0;
+  padding: 22px;
+  font-size: 32px;
+  border: 1px solid var(--c6);
+  background: var(--c31);
+}
+.invite-link-preview {
+  overflow-wrap: anywhere;
+}
+.professor-link-result {
+  margin-top: 20px;
+  display: grid;
+  gap: 10px;
+  font-size: 12px;
+}
+.professor-link-result input {
+  font-size: 12px;
+}
+.monitor-access-list {
+  margin-top: 22px;
+  font-size: 12px;
+}
+.monitor-access-list p {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+@media (max-width: 600px) {
+  .prof-invite-panel {
+    padding: 20px;
+  }
+  .prof-placement {
+    grid-template-columns: 1fr;
+  }
+  .prof-form-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .prof-class-list > header {
+    flex-wrap: wrap;
+  }
+  .prof-team-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+    padding-bottom: 12px;
+  }
+  .prof-team-row select {
+    width: 100%;
+  }
+  .prof-new-class {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .invite-kind {
+    gap: 8px;
+  }
+  .invite-kind button {
+    padding: 12px;
+    font-size: 13px;
+  }
+}
+.prof-invitation-ready {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 9px;
+  background: var(--c31);
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.prof-invitation-ready > svg {
+  color: var(--blue);
+  flex-shrink: 0;
+}
+.prof-invitation-ready > span {
+  flex: 1;
+}
+.prof-invitation-ready button {
+  padding: 0;
+  min-height: 28px;
+  font-size: 11px;
+}
+@media (max-width: 600px) {
+  .prof-form-footer .primary {
+    order: -1;
+  }
+  .onboard-body > .page-kicker {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .prof-invite-panel {
+    padding: 18px;
+  }
+  .prof-panel-heading {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .prof-invitation-ready {
+    font-size: 12px;
+    padding: 10px;
+  }
+}

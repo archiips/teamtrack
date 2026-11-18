@@ -185,9 +185,15 @@ export default function Page() {
   // After signing in: an invite link joins that workspace straight away.
   async function afterAuth() {
     const code = invite;
-    if (code || monitorToken) {
+    if (monitorToken) {
+      // Monitoring starts with class placement, not an automatic join at login.
+      setAdding(true);
+      await refresh();
+      return;
+    }
+    if (code) {
       const me = await (await fetch("/api/workspace")).json();
-      if (code && me.portal === "instructor") {
+      if (me.portal === "instructor") {
         setAdding(true);
         await refresh();
         return;
@@ -198,11 +204,7 @@ export default function Page() {
           "Content-Type": "application/json",
           "x-csrf-token": me.csrf,
         },
-        body: JSON.stringify(
-          monitorToken
-            ? { action: "monitor.join", token: monitorToken }
-            : { action: "join", code },
-        ),
+        body: JSON.stringify({ action: "join", code }),
       });
       if (r.ok) {
         setInvite("");
@@ -255,9 +257,25 @@ export default function Page() {
     setBusy(true);
     setError("");
     try {
+      let requestCsrf = csrf;
+      if (role !== portal) {
+        const switched = await fetch("/api/workspaces", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-csrf-token": csrf },
+          body: JSON.stringify({ action: "portal", portal: role }),
+        });
+        if (!switched.ok)
+          throw Error("Could not switch practice roles. Please retry.");
+        const current = await fetch("/api/workspace");
+        if (!current.ok) throw Error("Please sign in again.");
+        requestCsrf = (await current.json()).csrf;
+      }
       const r = await fetch("/api/workspaces", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-csrf-token": csrf },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": requestCsrf,
+        },
         body: JSON.stringify({ action: "practice", role }),
       });
       if (!r.ok) throw Error((await r.json()).error);
@@ -556,6 +574,14 @@ export default function Page() {
     prof = me.role === "instructor",
     organizer = !me.monitor && (prof || !!me.owner),
     group = isGroup(s),
+    courseLabel =
+      (prof
+        ? classes.find(
+            (c) =>
+              c.id ===
+              workspaces.find((w) => w.namespace === namespace)?.classId,
+          )?.name
+        : undefined) || s.course,
     ghOn = ghEnabled && !s.practice,
     // Practice: views visited so far (stored), plus the one open now.
     practiceSeen = new Set(
@@ -846,7 +872,7 @@ export default function Page() {
                   ? "Your private practice"
                   : namespace === "demo"
                     ? "Fall 2026 · CSS 474"
-                    : s.course}
+                    : courseLabel}
               </small>
             </div>
             {account && <ChevronsUpDown size={15} />}
@@ -878,7 +904,9 @@ export default function Page() {
                 }}
               >
                 <Plus size={14} />
-                Create or join another
+                {portal === "instructor"
+                  ? "Manage classes & teams"
+                  : "Create or join another"}
               </button>
             </div>
           )}
@@ -952,7 +980,7 @@ export default function Page() {
         <Doodles variant="band" />
         <header className="topbar">
           <div className="breadcrumb">
-            <span>{s.course}</span>
+            <span>{courseLabel}</span>
             <ChevronRight size={14} />
             <strong>{nav.find((n) => n.id === view)?.name}</strong>
           </div>
@@ -1049,7 +1077,11 @@ export default function Page() {
                         }}
                       >
                         <Plus size={15} />
-                        <span>Create or join another</span>
+                        <span>
+                          {portal === "instructor"
+                            ? "Manage classes & teams"
+                            : "Create or join another"}
+                        </span>
                       </button>
                       {!workspaces.some((w) => w.practice) && (
                         <button
@@ -2874,6 +2906,7 @@ export default function Page() {
           onRefresh={refresh}
           code={s.inviteCode}
           canRotate={organizer}
+          canInviteProfessor={organizer || (group && !me.monitor)}
           group={group}
           busy={busy}
           onRotate={() =>
@@ -3085,6 +3118,7 @@ function InviteModal({
   code,
   group,
   canRotate,
+  canInviteProfessor,
   busy,
   onRotate,
   onClose,
@@ -3095,15 +3129,19 @@ function InviteModal({
   code: string;
   group: boolean;
   canRotate: boolean;
+  canInviteProfessor: boolean;
   busy: boolean;
   onRotate: () => Promise<boolean>;
   onClose: () => void;
 }) {
-  const [copied, setCopied] = useState("");
-  const [monitorLink, setMonitorLink] = useState(""),
-    [inviteError, setInviteError] = useState("");
+  const [copied, setCopied] = useState(""),
+    [kind, setKind] = useState<"teammate" | "professor">("teammate"),
+    [monitorLink, setMonitorLink] = useState(""),
+    [inviteError, setInviteError] = useState(""),
+    [creating, setCreating] = useState(false);
   async function monitorAction(body: unknown) {
     setInviteError("");
+    setCreating(true);
     try {
       const r = await fetch("/api/workspaces", {
         method: "POST",
@@ -3116,105 +3154,155 @@ function InviteModal({
       else await onRefresh();
     } catch (e) {
       setInviteError((e as Error).message);
+    } finally {
+      setCreating(false);
     }
   }
-  const pretty = code.slice(0, 4) + "-" + code.slice(4);
-  const link = `${location.origin}/?join=${code}`;
-  const copy = async (what: string, value: string) => {
+  const pretty = code.slice(0, 4) + "-" + code.slice(4),
+    link = `${location.origin}/?join=${code}`;
+  async function copy(what: string, value: string) {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(what);
     } catch {
       setCopied("");
     }
-  };
+  }
   return (
     <Modal
-      title="Invite people"
-      subtitle={
-        group
-          ? "Anyone with this code or link joins your team straight away."
-          : "Anyone with this code or link joins as a student, then picks or starts their team."
-      }
+      title="Invite to this workspace"
+      subtitle="Choose the access you want to share."
       onClose={onClose}
     >
-      <div className="invite-code" aria-label="Invite code">
-        {pretty}
-      </div>
-      <div className="invite-actions">
-        <button className="primary" onClick={() => copy("link", link)}>
-          <Link2 size={15} />
-          {copied === "link" ? "Link copied" : "Copy invite link"}
+      <div className="invite-kind" aria-label="Invitation type">
+        <button
+          type="button"
+          aria-pressed={kind === "teammate"}
+          className={kind === "teammate" ? "selected" : ""}
+          onClick={() => setKind("teammate")}
+        >
+          <Users size={17} />
+          Teammates<small>Join and work with your team</small>
         </button>
-        <button className="secondary" onClick={() => copy("code", pretty)}>
-          <Copy size={15} />
-          {copied === "code" ? "Code copied" : "Copy code"}
+        <button
+          type="button"
+          aria-pressed={kind === "professor"}
+          className={kind === "professor" ? "selected" : ""}
+          onClick={() => setKind("professor")}
+        >
+          <GraduationCap size={17} />
+          Professor<small>Monitor this workspace</small>
         </button>
       </div>
-      <p className="form-note">{link}</p>
-      {canRotate && (
-        <section>
-          <h3>Invite a professor to monitor</h3>
-          <p className="form-note">
-            Read-only access to this workspace. Each link works once and expires
-            after seven days. Creating a new link replaces the unused one.
+      {kind === "teammate" ? (
+        <section className="invite-panel">
+          <h3>Invite a teammate</h3>
+          <p>
+            {group
+              ? "This code joins your team as a student."
+              : "This code joins the class workspace as a student."}{" "}
+            For your instructor, choose Professor above.
           </p>
-          <button
-            className="secondary"
-            onClick={() => monitorAction({ action: "monitor.invite" })}
-          >
-            Create professor invite link
-          </button>
-          {monitorLink && (
-            <label>
-              Professor invitation
-              <input
-                aria-label="Professor invitation"
-                readOnly
-                value={monitorLink}
-                onFocus={(e) => e.currentTarget.select()}
-              />
-              <button
-                className="text-button"
-                onClick={() => copy("monitor", monitorLink)}
-              >
-                {copied === "monitor" ? "Copied" : "Copy professor link"}
-              </button>
-            </label>
+          <div className="invite-code" aria-label="Invite code">
+            {pretty}
+          </div>
+          <div className="invite-actions">
+            <button className="primary" onClick={() => copy("link", link)}>
+              <Link2 size={15} />
+              {copied === "link" ? "Link copied" : "Copy teammate link"}
+            </button>
+            <button className="secondary" onClick={() => copy("code", pretty)}>
+              <Copy size={15} />
+              {copied === "code" ? "Code copied" : "Copy code"}
+            </button>
+          </div>
+          <p className="form-note invite-link-preview">{link}</p>
+          {canRotate && (
+            <button
+              className="text-button"
+              disabled={busy}
+              onClick={() =>
+                confirm(
+                  "Replace the teammate code? The old code stops working; existing members stay in.",
+                ) && onRotate()
+              }
+            >
+              <RefreshCw size={13} />
+              Replace teammate code
+            </button>
           )}
-          {monitors.map((u) => (
-            <p key={u.id}>
-              {u.name}{" "}
+        </section>
+      ) : (
+        <section className="invite-panel">
+          <h3>Invite your professor</h3>
+          <p>
+            Your professor can review this workspace and add it to one of their
+            classes. Their access is read-only.
+          </p>
+          {canInviteProfessor ? (
+            <>
               <button
-                className="text-button"
-                onClick={() =>
-                  monitorAction({ action: "monitor.remove", userId: u.id })
-                }
+                className="primary"
+                disabled={busy || creating}
+                onClick={() => monitorAction({ action: "monitor.invite" })}
               >
-                Remove monitoring access
+                <Link2 size={16} />
+                {creating ? "Creating…" : "Create professor invite link"}
               </button>
+              {monitorLink && (
+                <label className="professor-link-result">
+                  Professor invitation
+                  <input
+                    aria-label="Professor invitation"
+                    readOnly
+                    value={monitorLink}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    className="secondary"
+                    onClick={() => copy("monitor", monitorLink)}
+                  >
+                    <Copy size={15} />
+                    {copied === "monitor" ? "Copied" : "Copy professor link"}
+                  </button>
+                </label>
+              )}
+              <p className="form-note">
+                Send this link directly to your professor. It works once and
+                expires after seven days.
+              </p>
+            </>
+          ) : (
+            <p className="prof-invite-notice">
+              Ask this class workspace’s organizer to create the professor
+              invitation.
             </p>
-          ))}
+          )}
+          {canRotate && monitors.length > 0 && (
+            <details className="monitor-access-list">
+              <summary>Professors with access ({monitors.length})</summary>
+              {monitors.map((u) => (
+                <p key={u.id}>
+                  {u.name}
+                  <button
+                    className="text-button"
+                    disabled={creating}
+                    onClick={() =>
+                      monitorAction({ action: "monitor.remove", userId: u.id })
+                    }
+                  >
+                    Remove monitoring access
+                  </button>
+                </p>
+              ))}
+            </details>
+          )}
           {inviteError && (
             <p className="error" role="alert">
               {inviteError}
             </p>
           )}
         </section>
-      )}
-      {canRotate && (
-        <button
-          className="text-button"
-          disabled={busy}
-          onClick={() =>
-            confirm(
-              "Make a new code? The current code and link stop working; people already in stay in.",
-            ) && onRotate()
-          }
-        >
-          <RefreshCw size={13} />
-          Replace with a new code
-        </button>
       )}
     </Modal>
   );
@@ -3363,7 +3451,7 @@ function TaskDrawer({
   }, []);
   return (
     <dialog
-      className="drawer"
+      className="drawer task-detail-drawer"
       ref={ref}
       onCancel={onClose}
       aria-label={task.title}
@@ -3520,11 +3608,14 @@ function TaskDrawer({
             </strong>
           </div>
         </div>
-        <div className="blocker-box">
-          <h3>
-            <Flag size={16} />
-            Anything in the way?
-          </h3>
+        <details
+          className="blocker-box task-blocker"
+          open={task.blocker ? true : undefined}
+        >
+          <summary>
+            <Flag size={15} />
+            {task.blocker ? "Blocker needs attention" : "Add a blocker"}
+          </summary>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -3550,9 +3641,9 @@ function TaskDrawer({
               Save
             </button>
           </form>
-        </div>
+        </details>
         <div className="evidence-heading">
-          <h3>Work, with context</h3>
+          <h3>Updates & discussion</h3>
           <span>
             <Link2 size={14} />
             Visible to your team & instructor

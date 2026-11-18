@@ -22,6 +22,7 @@ export type WorkspaceSummary = {
   project: string;
   role: "instructor" | "student";
   practice?: boolean;
+  monitor?: boolean;
   classId?: string;
 };
 
@@ -344,20 +345,26 @@ export function Onboarding({
           {account.email}
         </span>
         <h1>
-          {workspaces.length ? "Where to next, " : "Let’s get you set up, "}
-          <em className="accent">{account.name.split(" ")[0]}</em>.
+          {role === "instructor" ? (
+            "Classes & team workspaces"
+          ) : (
+            <>
+              Where to next,{" "}
+              <em className="accent">{account.name.split(" ")[0]}</em>.
+            </>
+          )}
         </h1>
         <p className="onboard-lede">
-          A workspace holds one class project: its teams, tasks and agreements.
-          Joining a classmate’s? Use their invite code. Starting fresh? Create
-          one and share the code.
+          {role === "instructor"
+            ? "Monitor your student teams and keep their existing workspaces organized by class."
+            : "Join your team with an invite code, or create a new workspace and invite your teammates."}
         </p>
         {error && (
           <div className="error-banner" role="alert">
             {error}
           </div>
         )}
-        {monitorToken && (
+        {monitorToken && role === "student" && (
           <section className="panel onboard-card">
             <h2>Professor monitoring invitation</h2>
             <p>
@@ -368,17 +375,10 @@ export function Onboarding({
               className="primary"
               disabled={!!busy}
               onClick={() =>
-                role === "instructor"
-                  ? act("monitor", {
-                      action: "monitor.join",
-                      token: monitorToken,
-                    })
-                  : act("portal", { action: "portal", portal: "instructor" })
+                act("portal", { action: "portal", portal: "instructor" })
               }
             >
-              {role === "instructor"
-                ? "Accept monitoring invitation"
-                : "Switch to professor portal to accept"}
+              Switch to professor portal to accept
             </button>
           </section>
         )}
@@ -388,6 +388,9 @@ export function Onboarding({
             workspaces={workspaces}
             csrf={csrf}
             onRefresh={onRefresh}
+            onDone={onDone}
+            monitorToken={monitorToken}
+            studentInvite={invite}
           />
         )}
         <div className="onboard-grid">
@@ -425,143 +428,113 @@ export function Onboarding({
                 </button>
               </form>
             </section>
-          ) : (
+          ) : null}
+          <details
+            className="workspace-create-options"
+            open={role === "student" || undefined}
+          >
+            <summary>
+              {role === "instructor"
+                ? "Create a new team workspace instead"
+                : "Create a workspace"}
+            </summary>
             <section className="panel onboard-card">
-              <h2>Monitor a team’s workspace</h2>
+              <span className="onboard-icon">
+                <Plus size={20} />
+              </span>
+              <h2>Create a workspace</h2>
               <p>
-                Ask its organizer for a professor monitoring invitation link.
-                Student invite codes grant student access and belong in the
-                student portal.
+                For your class or your group. You can change all of it later.
               </p>
-              {invite && (
-                <p role="alert">
-                  This link is a student invitation. Ask for a professor
-                  invitation instead.
-                </p>
-              )}
-            </section>
-          )}
-          <section className="panel onboard-card">
-            <span className="onboard-icon">
-              <Plus size={20} />
-            </span>
-            <h2>Create a workspace</h2>
-            <p>For your class or your group. You can change all of it later.</p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const f = new FormData(e.currentTarget);
-                void act("create", {
-                  action: "create",
-                  role,
-                  classId: f.get("classId") || undefined,
-                  team: f.get("team") ?? "",
-                  course: f.get("course"),
-                  project: f.get("project"),
-                  description: f.get("description"),
-                  due: f.get("due"),
-                });
-              }}
-            >
-              <div
-                className="role-pick"
-                role="radiogroup"
-                aria-label="Your role"
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  void act("create", {
+                    action: "create",
+                    role,
+                    classId: f.get("classId") || undefined,
+                    team: f.get("team") ?? "",
+                    course: f.get("course"),
+                    project: f.get("project"),
+                    description: f.get("description"),
+                    due: f.get("due"),
+                  });
+                }}
               >
-                {(
-                  [
-                    ["student", "I’m a student", "One workspace for my team"],
-                    [
-                      "instructor",
-                      "I’m the instructor",
-                      "Several teams, I see all",
-                    ],
-                  ] as const
-                ).map(([id, label, hint]) => (
-                  <button
-                    type="button"
-                    key={id}
-                    role="radio"
-                    aria-checked={role === id}
-                    className={role === id ? "selected" : ""}
-                    disabled={!!busy}
-                    onClick={() => {
-                      if (id !== role)
-                        void act("portal", { action: "portal", portal: id });
-                    }}
-                  >
-                    <strong>{label}</strong>
-                    <small>{hint}</small>
-                  </button>
-                ))}
-              </div>
-              {role === "instructor" && classes.length > 0 && (
+                {role === "instructor" && classes.length > 0 && (
+                  <label>
+                    Place this workspace in a class
+                    <select name="classId">
+                      <option value="">Separate workspace</option>
+                      {classes.map((c) => (
+                        <option value={c.id} key={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <label>
-                  Place this workspace in a class
-                  <select name="classId">
-                    <option value="">Separate workspace</option>
-                    {classes.map((c) => (
-                      <option value={c.id} key={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <label>
-                Class name
-                <input
-                  name="course"
-                  placeholder="CSS 360 · Software engineering"
-                  required
-                  maxLength={120}
-                />
-              </label>
-              <div className="form-grid">
-                <label>
-                  Project name
+                  Class name
                   <input
-                    name="project"
-                    placeholder="Group project"
+                    name="course"
+                    placeholder="CSS 360 · Software engineering"
                     required
                     maxLength={120}
                   />
                 </label>
-                <label>
-                  Final due date
-                  <input
-                    name="due"
-                    type="date"
-                    min={today()}
-                    defaultValue={due}
-                    required
-                  />
-                </label>
-              </div>
-              {role === "student" && (
+                <div className="form-grid">
+                  <label>
+                    Project name
+                    <input
+                      name="project"
+                      placeholder="Group project"
+                      required
+                      maxLength={120}
+                    />
+                  </label>
+                  <label>
+                    Final due date
+                    <input
+                      name="due"
+                      type="date"
+                      min={today()}
+                      defaultValue={due}
+                      required
+                    />
+                  </label>
+                </div>
+                {role === "student" && (
+                  <label>
+                    <span>
+                      Team name{" "}
+                      <small>(optional, defaults to the project)</small>
+                    </span>
+                    <input
+                      name="team"
+                      placeholder="Byte Club"
+                      maxLength={120}
+                    />
+                  </label>
+                )}
                 <label>
                   <span>
-                    Team name <small>(optional, defaults to the project)</small>
+                    What’s the project about? <small>(optional)</small>
                   </span>
-                  <input name="team" placeholder="Byte Club" maxLength={120} />
+                  <textarea
+                    name="description"
+                    maxLength={4000}
+                    placeholder="One or two sentences your team can rally around."
+                  />
                 </label>
-              )}
-              <label>
-                <span>
-                  What’s the project about? <small>(optional)</small>
-                </span>
-                <textarea
-                  name="description"
-                  maxLength={4000}
-                  placeholder="One or two sentences your team can rally around."
-                />
-              </label>
-              <button className="primary" disabled={!!busy}>
-                {busy === "create" ? "Creating…" : "Create workspace"}
-                <ArrowRight size={16} />
-              </button>
-            </form>
-          </section>
+                <button className="primary" disabled={!!busy}>
+                  {busy === "create" ? "Creating…" : "Create workspace"}
+                  <ArrowRight size={16} />
+                </button>
+              </form>
+            </section>
+          </details>
         </div>
         {!workspaces.some((w) => w.practice) && (
           <section className="onboard-practice">
@@ -578,54 +551,49 @@ export function Onboarding({
             <button
               className="secondary"
               disabled={!!busy}
-              hidden={role !== "student"}
-              onClick={() =>
-                act("practice", { action: "practice", role: "student" })
-              }
+              onClick={() => act("practice", { action: "practice", role })}
             >
-              {busy === "practice" ? "Opening…" : "As a student"}
-            </button>
-            <button
-              className="secondary"
-              disabled={!!busy}
-              hidden={role !== "instructor"}
-              onClick={() =>
-                act("practice", { action: "practice", role: "instructor" })
-              }
-            >
-              As an instructor
+              {busy === "practice"
+                ? "Opening…"
+                : role === "student"
+                  ? "As a student"
+                  : "As an instructor"}
             </button>
           </section>
         )}
-        {workspaces.length > 0 && (
+        {workspaces.some((w) => role === "student" || w.practice) && (
           <section className="onboard-list">
-            <h2>Your workspaces</h2>
-            {workspaces.map((w) => (
-              <button
-                key={w.namespace}
-                className="workspace-row"
-                disabled={!!busy}
-                onClick={() =>
-                  act("switch", { action: "switch", namespace: w.namespace })
-                }
-              >
-                <span className="onboard-icon small">
-                  <Users size={16} />
-                </span>
-                <span>
-                  <strong>{w.project}</strong>
-                  <small>
-                    {w.classId
-                      ? `${classes.find((c) => c.id === w.classId)?.name || "Class"} · `
-                      : ""}
-                    {w.practice
-                      ? "Your private practice · Sample data"
-                      : `${w.course} · ${w.role === "instructor" ? "Instructor" : "Student"}`}
-                  </small>
-                </span>
-                <ArrowRight size={16} />
-              </button>
-            ))}
+            <h2>
+              {role === "instructor" ? "Private practice" : "Your workspaces"}
+            </h2>
+            {workspaces
+              .filter((w) => role === "student" || w.practice)
+              .map((w) => (
+                <button
+                  key={w.namespace}
+                  className="workspace-row"
+                  disabled={!!busy}
+                  onClick={() =>
+                    act("switch", { action: "switch", namespace: w.namespace })
+                  }
+                >
+                  <span className="onboard-icon small">
+                    <Users size={16} />
+                  </span>
+                  <span>
+                    <strong>{w.project}</strong>
+                    <small>
+                      {w.classId
+                        ? `${classes.find((c) => c.id === w.classId)?.name || "Class"} · `
+                        : ""}
+                      {w.practice
+                        ? "Your private practice · Sample data"
+                        : `${w.course} · ${w.role === "instructor" ? "Instructor" : "Student"}`}
+                    </small>
+                  </span>
+                  <ArrowRight size={16} />
+                </button>
+              ))}
           </section>
         )}
       </div>

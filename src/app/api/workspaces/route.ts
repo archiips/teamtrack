@@ -95,7 +95,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
     if (body.action === "monitor.join")
-      namespace = await joinMonitor(a.userId, String(body.token ?? ""));
+      namespace = await joinMonitor(a.userId, String(body.token ?? ""), {
+        classId: typeof body.classId === "string" ? body.classId : undefined,
+        className:
+          typeof body.className === "string" ? body.className : undefined,
+      });
     else if (body.action === "create") {
       if (body.classId) {
         await requireClassOwner(a.userId, String(body.classId));

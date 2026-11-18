@@ -1,0 +1,15 @@
+# Intuitive monitoring and task details
+
+User-approved outcome: professors add an existing team's workspace to a class without duplicating its project. Students can find a professor invitation. Task details are compact and readable with file/comment functionality preserved.
+
+Findings: InviteModal gates professor invitations on organizer-only canRotate; Archit's group membership is ordinary student. Onboarding mixes professor monitoring with a large create-new-workspace form. monitor.join has no class placement input; attachment must be a separate later action. Task composer stacks heavy tabs, large textarea, link, attachment and submit sections; blocker occupies a large box even when empty.
+
+Chosen design: separate teammate/professor invite choices. In single-team group workspaces, active members may create read-only professor invitations (they already hold the student join code); only the organizer may manage/remove monitors or rotate student codes. Multi-team class invitations remain organizer-only to avoid granting access beyond a student's team. Professor hub accepts a monitoring link, selects an existing or new class, and atomically joins/places the existing workspace. Linked teams list under classes and open directly. New workspace creation remains available under a clearly secondary collapsed section. Student links are labelled as student access; never upgraded into monitoring credentials.
+
+Visual direction: preserve existing rounded type and purple brand, using current --paper/--ink/--blue tokens; calm surfaces and thin separators instead of stacked inset boxes. One primary action per form. Professor layout has the invitation form then grouped class/team list; empty state explains what is needed. Task layout has title, compact properties, collapsed blocker unless active, compact update composer with optional evidence link and file controls, then chronological updates. Light/dark and 390px must work.
+
+Correctness review: class ownership verified before consuming invitation; membership plus class placement in one SQL transaction. Invalid/foreign class must not consume valid token. Existing project/name/data retained. Existing student memberships are not silently promoted. All access checks retained. No production membership changes during implementation/testing.
+
+Milestones: failing API regression for ordinary group member invitation plus atomic class placement; backend implementation; professor hub/invite UI; compact task UI; realistic local browser flow including files/comments; unit/API/lint/type/build, screenshots and diff review; push and deploy production; Linear update.
+
+Acceptance: ordinary student group member shares professor link; professor pastes/opens it, chooses/creates class and opens same project read-only with no project-name form. Other professors' classes and unrelated workspaces inaccessible. Existing class-creator workflow preserved under explicit advanced action. Task attachments, contribution/comment distinction, status/owner edits and blocker save remain usable; primary composer controls visible on desktop/mobile.

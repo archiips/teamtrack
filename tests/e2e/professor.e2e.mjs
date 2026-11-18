@@ -22,9 +22,13 @@ try {
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
+  await page.getByRole("button", { name: "New class", exact: true }).click();
   await page.getByLabel("New class name").fill("Class One");
   await page.getByRole("button", { name: "Create class", exact: true }).click();
-  await page.getByText("Class One", { exact: true }).first().waitFor();
+  await page.getByRole("heading", { name: "Class One", exact: true }).waitFor();
+  await page
+    .getByText("Create a new team workspace instead", { exact: true })
+    .click();
   await page
     .getByLabel("Place this workspace in a class")
     .selectOption({ label: "Class One" });
@@ -37,6 +41,7 @@ try {
     .click();
   await page.getByRole("button", { name: "Invite", exact: true }).waitFor();
   await page.getByRole("button", { name: "Invite", exact: true }).click();
+  await page.getByRole("button", { name: /^Professor/ }).click();
   await page
     .getByRole("button", { name: "Create professor invite link", exact: true })
     .click();
@@ -50,7 +55,7 @@ try {
   await page.getByRole("button", { name: "Close dialog", exact: true }).click();
   await page.getByRole("button", { name: "Account and workspaces" }).click();
   await page
-    .getByRole("menuitem", { name: "Create or join another", exact: true })
+    .getByRole("menuitem", { name: "Manage classes & teams", exact: true })
     .click();
   await page.getByText("Your classes", { exact: true }).waitFor();
   await page.screenshot({

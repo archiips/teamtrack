@@ -167,7 +167,7 @@ try {
     })
     .click();
   await emptyPage
-    .getByRole("button", { name: "Accept monitoring invitation", exact: true })
+    .getByRole("button", { name: "Add team to class", exact: true })
     .waitFor();
   await emptyContext.close();
   assert.deepEqual(errors, []);

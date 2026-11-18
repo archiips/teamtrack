@@ -20,6 +20,7 @@ export type WorkspaceSummary = {
   project: string;
   role: "instructor" | "student";
   practice?: boolean;
+  monitor?: boolean;
 };
 
 export async function listWorkspaces(
@@ -40,6 +41,7 @@ export async function listWorkspaces(
       project: r.project,
       role: r.me.role === "instructor" ? "instructor" : "student",
       practice: !!r.practice,
+      monitor: !!r.me.monitor,
     }));
 }
 
