@@ -4,7 +4,7 @@ import { changePassword } from "@/lib/accounts";
 export async function POST(req: Request) {
   try {
     sameOrigin(req);
-    const a = await session();
+    const a = await session({ accountOnly: true });
     if (!a.account || req.headers.get("x-csrf-token") !== a.csrf)
       return NextResponse.json(
         { error: "Please sign in again" },

@@ -170,3 +170,17 @@ export async function accountAuthVersion(userId: string) {
     await db`SELECT auth_version FROM teamtrack_user WHERE id=${userId}`;
   return rows[0]?.auth_version as number | undefined;
 }
+
+/** Account workspace requests require both current membership and an active workspace identity. */
+export async function accountWorkspaceAccess(
+  userId: string,
+  namespace: string,
+) {
+  const db = await accountTables();
+  const rows = await db`SELECT 1 FROM teamtrack_member m
+    JOIN teamtrack_state s ON s.id=m.namespace
+    WHERE m.user_id=${userId} AND m.namespace=${namespace}
+      AND EXISTS (SELECT 1 FROM jsonb_array_elements(s.data->'users') u
+        WHERE u->>'id'=${userId} AND COALESCE(u->>'active','true') <> 'false')`;
+  return rows.length > 0;
+}

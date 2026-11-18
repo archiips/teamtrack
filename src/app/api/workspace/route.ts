@@ -10,7 +10,7 @@ import { listClasses, classMapping } from "@/lib/classes";
 export const dynamic = "force-dynamic";
 export async function GET() {
   try {
-    const a = await session();
+    const a = await session({ accountOnly: true });
     const headers = { "Cache-Control": "no-store" };
     const account = a.account ? await accountById(a.userId) : undefined;
     if (a.account && !account) throw Error("Please sign in");

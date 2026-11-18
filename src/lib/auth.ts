@@ -1,4 +1,4 @@
-import { accountAuthVersion } from "./accounts";
+import { accountAuthVersion, accountWorkspaceAccess } from "./accounts";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
@@ -56,7 +56,9 @@ export async function signIn(
   });
   return res;
 }
-export async function session() {
+export async function session({
+  accountOnly = false,
+}: { accountOnly?: boolean } = {}) {
   const token = (await cookies()).get("tt_session")?.value;
   if (!token) throw Error("Please sign in");
   const { payload } = await jwtVerify(token, sessionKey(), {
@@ -68,6 +70,13 @@ export async function session() {
     const version = await accountAuthVersion(payload.userId);
     if (version === undefined || (payload.authVersion ?? 0) !== version)
       throw Error("Please sign in again");
+    if (
+      !accountOnly &&
+      typeof payload.namespace === "string" &&
+      payload.namespace &&
+      !(await accountWorkspaceAccess(payload.userId, payload.namespace))
+    )
+      throw Error("Access denied: workspace membership revoked");
   }
   return {
     userId: payload.userId,

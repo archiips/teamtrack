@@ -67,3 +67,7 @@ Browser checks: `node tests/e2e/feedback.e2e.mjs`, `node tests/e2e/professor.e2e
 ## Student and professor portal separation
 
 `TEST_BASE_URL=http://localhost:3100 npx vitest run tests/portal-api.test.ts` checks role-specific login landing, session persistence, filtered lists, explicit switching, student-invite rejection in the professor portal, empty onboarding and independent practice copies. `node tests/e2e/portals.e2e.mjs` exercises the same account in both portals, reload, filtered menus, mobile switch visibility and private practice labels. Use the isolated local production build for browser checks if development hot reload repeatedly navigates the page.
+
+## Account and workspace access isolation
+
+`DATABASE_URL=postgres://tt@127.0.0.1:54349/teamtrack TEST_BASE_URL=http://localhost:3100 npx vitest run tests/workspace-access-api.test.ts` verifies unrelated account lists/switches, chat/file boundaries, token tampering and access revocation against the exact disposable database. `node tests/e2e/account-isolation.e2e.mjs` delays refresh and logout to check that an old account cannot repopulate a newly signed-in session. These fixtures create synthetic local accounts only.

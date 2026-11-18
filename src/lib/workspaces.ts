@@ -1,5 +1,5 @@
 import { randomInt, randomUUID } from "node:crypto";
-import { accountById, accountTables } from "./accounts";
+import { accountById, accountTables, accountWorkspaceAccess } from "./accounts";
 import { blankState, isGroup, person } from "./domain";
 import { practiceState } from "./practice";
 import type { State } from "./types";
@@ -44,10 +44,7 @@ export async function listWorkspaces(
 }
 
 export async function isMember(userId: string, namespace: string) {
-  const db = await accountTables();
-  const rows =
-    await db`SELECT 1 FROM teamtrack_member WHERE user_id=${userId} AND namespace=${namespace}`;
-  return rows.length > 0;
+  return accountWorkspaceAccess(userId, namespace);
 }
 
 /** Sets up a workspace with its creator as instructor or as the first student. */

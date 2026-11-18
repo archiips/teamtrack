@@ -279,12 +279,17 @@ export default function Page() {
     if (real) void switchTo(real.namespace);
     else setAdding(true);
   }
-  function signOut() {
-    void fetch("/api/auth/logout", { method: "POST" });
-    setS(null);
-    setAccount(null);
-    setAdding(false);
-    setError("");
+  async function signOut() {
+    setBusy(true);
+    try {
+      const r = await fetch("/api/auth/logout", { method: "POST" });
+      if (!r.ok) throw Error();
+      // A new document discards in-flight responses and all previous account state.
+      window.location.reload();
+    } catch {
+      setError("Could not sign out. Please retry.");
+      setBusy(false);
+    }
   }
   useSpotlight();
   useMotionGate();

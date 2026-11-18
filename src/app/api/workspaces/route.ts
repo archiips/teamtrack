@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   let a;
   try {
     sameOrigin(req);
-    a = await session();
+    a = await session({ accountOnly: true });
   } catch {
     return NextResponse.json({ error: "Please sign in" }, { status: 401 });
   }
@@ -32,6 +32,11 @@ export async function POST(req: Request) {
     );
   try {
     const body = await req.json();
+    if (
+      ["monitor.invite", "monitor.remove"].includes(body.action) &&
+      !(await isMember(a.userId, a.namespace))
+    )
+      throw Error("Access denied: workspace membership revoked");
     if (body.action === "portal") {
       const portal = portalValue(body.portal);
       if (!portal) throw Error("Choose a valid portal");
