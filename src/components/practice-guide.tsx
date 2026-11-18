@@ -149,12 +149,12 @@ export function PracticeGuide({
       >
         <span className="practice-badge">
           <GraduationCap size={15} />
-          Practice {prof ? "as an instructor" : "as a student"}
+          Private practice {prof ? "as an instructor" : "as a student"}
         </span>
         <strong>
           {count === list.length
             ? "You’ve tried everything. You’re ready."
-            : `${count} of ${list.length} tried · nothing here is shared`}
+            : `${count} of ${list.length} tried · your own sample copy, not a shared project`}
         </strong>
         <span
           className="practice-meter"

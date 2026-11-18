@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { sameOrigin, session, signIn } from "@/lib/auth";
+import { sameOrigin, session, signIn, portalValue } from "@/lib/auth";
 import {
   createWorkspace,
   isMember,
   joinWorkspace,
   practiceWorkspace,
+  listWorkspaces,
 } from "@/lib/workspaces";
 import {
   createClass,
@@ -31,6 +32,42 @@ export async function POST(req: Request) {
     );
   try {
     const body = await req.json();
+    if (body.action === "portal") {
+      const portal = portalValue(body.portal);
+      if (!portal) throw Error("Choose a valid portal");
+      const namespace =
+        (await listWorkspaces(a.userId)).filter((w) => w.role === portal).at(-1)
+          ?.namespace || "";
+      return signIn(
+        NextResponse.json({ ok: true }),
+        a.userId,
+        namespace,
+        true,
+        portal,
+      );
+    }
+    if (
+      a.portal === "student" &&
+      ["class.create", "class.attach", "monitor.join"].includes(body.action)
+    )
+      throw Error("Choose the professor portal for this action");
+    if (a.portal === "instructor" && body.action === "join")
+      throw Error(
+        "This is a student invitation. Ask the organizer for a professor invitation link.",
+      );
+    if (
+      a.portal &&
+      ["create", "practice"].includes(body.action) &&
+      body.role !== a.portal
+    )
+      throw Error("Choose the matching portal before creating a workspace");
+    if (a.portal && body.action === "switch") {
+      const target = (await listWorkspaces(a.userId)).find(
+        (w) => w.namespace === body.namespace,
+      );
+      if (!target || target.role !== a.portal)
+        throw Error("Choose the matching portal to open this workspace");
+    }
     let namespace: string;
     if (body.action === "class.create") {
       const id = await createClass(a.userId, body.name);
@@ -77,11 +114,12 @@ export async function POST(req: Request) {
       a.userId,
       namespace,
       true,
+      body.action === "monitor.join" ? "instructor" : a.portal,
     );
   } catch (e) {
     const message = e instanceof Error ? e.message : "Could not save";
     const known =
-      /Enter|Choose|code|workspace|removed|Unknown action|valid text|invite|Class|Instructor|already belong/.test(
+      /Enter|Choose|code|workspace|removed|Unknown action|valid text|invite|invitation|Class|Instructor|already belong/.test(
         message,
       );
     return NextResponse.json(

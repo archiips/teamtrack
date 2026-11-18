@@ -2,6 +2,9 @@ import { accountAuthVersion } from "./accounts";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
+export type Portal = "student" | "instructor";
+export const portalValue = (value: unknown): Portal | undefined =>
+  value === "student" || value === "instructor" ? value : undefined;
 export function sessionKey() {
   const s = process.env.SESSION_SECRET;
   if (!s && process.env.VERCEL) throw Error("Session secret missing");
@@ -16,6 +19,7 @@ export async function createSession(
   userId: string,
   namespace = "demo",
   account = false,
+  portal?: Portal,
 ) {
   const csrf = crypto.randomUUID();
   const authVersion = account ? await accountAuthVersion(userId) : undefined;
@@ -26,6 +30,7 @@ export async function createSession(
     namespace,
     account,
     authVersion,
+    portal,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -39,8 +44,9 @@ export async function signIn(
   userId: string,
   namespace: string,
   account: boolean,
+  portal?: Portal,
 ) {
-  const { token } = await createSession(userId, namespace, account);
+  const { token } = await createSession(userId, namespace, account, portal);
   res.cookies.set("tt_session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -69,6 +75,7 @@ export async function session() {
     namespace:
       typeof payload.namespace === "string" ? payload.namespace : "demo",
     account: payload.account === true,
+    portal: portalValue(payload.portal),
   };
 }
 export function sameOrigin(req: Request) {

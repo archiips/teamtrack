@@ -156,7 +156,8 @@ export async function practiceWorkspace(userId: string, role: unknown) {
   await db.begin(async (tx) => {
     const old = await tx`
       SELECT m.namespace FROM teamtrack_member m JOIN teamtrack_state s ON s.id = m.namespace
-      WHERE m.user_id = ${me.id} AND (s.data->>'practice') = 'true'`;
+      WHERE m.user_id = ${me.id} AND (s.data->>'practice') = 'true'
+      AND EXISTS (SELECT 1 FROM jsonb_array_elements(s.data->'users') u WHERE u->>'id'=${me.id} AND u->>'role'=${r})`;
     const ids = old.map((o) => o.namespace as string);
     if (ids.length) {
       await tx`DELETE FROM teamtrack_member WHERE namespace = ANY(${ids})`;

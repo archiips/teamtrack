@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -42,15 +42,19 @@ async function post(url: string, body: unknown, csrf?: string) {
 /** Sign in or create an account. Calls onDone once the session cookie is set. */
 export function AuthPanel({
   invite,
+  professorInvite = false,
   onDone,
 }: {
   invite: string;
+  professorInvite?: boolean;
   onDone: () => Promise<void>;
 }) {
   const [mode, setMode] = useState<"signin" | "signup">(
     invite ? "signup" : "signin",
   );
-  const [entry, setEntry] = useState<"student" | "instructor">("student");
+  const [entry, setEntry] = useState<"student" | "instructor">(
+    professorInvite ? "instructor" : "student",
+  );
   const [forgot, setForgot] = useState(false),
     [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false),
@@ -61,8 +65,8 @@ export function AuthPanel({
     setBusy(true);
     setError("");
     try {
-      localStorage.setItem("tt-entry-role", entry);
       await post(mode === "signin" ? "/api/auth/login" : "/api/auth/signup", {
+        portal: entry,
         name: f.get("name"),
         email: f.get("email"),
         password: f.get("password"),
@@ -254,6 +258,7 @@ export function AuthPanel({
 
 /** Signed in, choosing a workspace: join with a code, create one, or open an existing one. */
 export function Onboarding({
+  portal,
   account,
   workspaces,
   classes,
@@ -265,6 +270,7 @@ export function Onboarding({
   onBack,
   onSignOut,
 }: {
+  portal: "student" | "instructor";
   account: Account;
   workspaces: WorkspaceSummary[];
   classes: ClassSummary[];
@@ -277,24 +283,15 @@ export function Onboarding({
   onSignOut: () => void;
 }) {
   const [busy, setBusy] = useState(""),
-    [error, setError] = useState(""),
-    [role, setRole] = useState<"student" | "instructor">("student");
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      if (
-        localStorage.getItem("tt-entry-role") === "instructor" ||
-        monitorToken
-      )
-        setRole("instructor");
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [monitorToken]);
+    [error, setError] = useState("");
+  const role = portal;
   async function act(kind: string, body: Record<string, unknown>) {
     setBusy(kind);
     setError("");
     try {
       await post("/api/workspaces", body, csrf);
       await onDone();
+      setBusy("");
     } catch (err) {
       setError((err as Error).message);
       setBusy("");
@@ -311,6 +308,18 @@ export function Onboarding({
           TeamTrack
         </div>
         <div className="onboard-actions">
+          <button
+            className="secondary"
+            disabled={!!busy}
+            onClick={() =>
+              act("portal", {
+                action: "portal",
+                portal: portal === "student" ? "instructor" : "student",
+              })
+            }
+          >
+            Switch to {portal === "student" ? "professor" : "student"} portal
+          </button>
           {onBack && (
             <button className="secondary" onClick={onBack}>
               <ArrowLeft size={15} />
@@ -329,7 +338,10 @@ export function Onboarding({
         </div>
       </header>
       <div className="onboard-body">
-        <span className="page-kicker">Signed in as {account.email}</span>
+        <span className="page-kicker">
+          {portal === "student" ? "Student" : "Professor"} portal ·{" "}
+          {account.email}
+        </span>
         <h1>
           {workspaces.length ? "Where to next, " : "Let’s get you set up, "}
           <em className="accent">{account.name.split(" ")[0]}</em>.
@@ -362,9 +374,7 @@ export function Onboarding({
             </button>
           </section>
         )}
-        {(role === "instructor" ||
-          classes.length > 0 ||
-          workspaces.some((w) => w.role === "instructor")) && (
+        {role === "instructor" && (
           <ProfessorWorkspaces
             classes={classes}
             workspaces={workspaces}
@@ -373,39 +383,56 @@ export function Onboarding({
           />
         )}
         <div className="onboard-grid">
-          <section className="panel onboard-card">
-            <span className="onboard-icon">
-              <KeyRound size={20} />
-            </span>
-            <h2>Join with an invite code</h2>
-            <p>Your instructor or teammate can find it under “Invite”.</p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const f = new FormData(e.currentTarget);
-                void act("join", { action: "join", code: f.get("code") });
-              }}
-            >
-              <label>
-                Invite code
-                <input
-                  name="code"
-                  className="code-input"
-                  placeholder="ABCD-2345"
-                  defaultValue={invite}
-                  autoComplete="off"
-                  autoCapitalize="characters"
-                  spellCheck={false}
-                  required
-                  maxLength={12}
-                />
-              </label>
-              <button className="primary" disabled={!!busy}>
-                {busy === "join" ? "Joining…" : "Join workspace"}
-                <ArrowRight size={16} />
-              </button>
-            </form>
-          </section>
+          {role === "student" ? (
+            <section className="panel onboard-card">
+              <span className="onboard-icon">
+                <KeyRound size={20} />
+              </span>
+              <h2>Join with a student invite code</h2>
+              <p>Your instructor or teammate can find it under “Invite”.</p>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  void act("join", { action: "join", code: f.get("code") });
+                }}
+              >
+                <label>
+                  Invite code
+                  <input
+                    name="code"
+                    className="code-input"
+                    placeholder="ABCD-2345"
+                    defaultValue={invite}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    required
+                    maxLength={12}
+                  />
+                </label>
+                <button className="primary" disabled={!!busy}>
+                  {busy === "join" ? "Joining…" : "Join workspace"}
+                  <ArrowRight size={16} />
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel onboard-card">
+              <h2>Monitor a team’s workspace</h2>
+              <p>
+                Ask its organizer for a professor monitoring invitation link.
+                Student invite codes grant student access and belong in the
+                student portal.
+              </p>
+              {invite && (
+                <p role="alert">
+                  This link is a student invitation. Ask for a professor
+                  invitation instead.
+                </p>
+              )}
+            </section>
+          )}
           <section className="panel onboard-card">
             <span className="onboard-icon">
               <Plus size={20} />
@@ -449,7 +476,11 @@ export function Onboarding({
                     role="radio"
                     aria-checked={role === id}
                     className={role === id ? "selected" : ""}
-                    onClick={() => setRole(id)}
+                    disabled={!!busy}
+                    onClick={() => {
+                      if (id !== role)
+                        void act("portal", { action: "portal", portal: id });
+                    }}
                   >
                     <strong>{label}</strong>
                     <small>{hint}</small>
@@ -539,6 +570,7 @@ export function Onboarding({
             <button
               className="secondary"
               disabled={!!busy}
+              hidden={role !== "student"}
               onClick={() =>
                 act("practice", { action: "practice", role: "student" })
               }
@@ -548,6 +580,7 @@ export function Onboarding({
             <button
               className="secondary"
               disabled={!!busy}
+              hidden={role !== "instructor"}
               onClick={() =>
                 act("practice", { action: "practice", role: "instructor" })
               }
@@ -578,7 +611,7 @@ export function Onboarding({
                       ? `${classes.find((c) => c.id === w.classId)?.name || "Class"} · `
                       : ""}
                     {w.practice
-                      ? "Practice workspace"
+                      ? "Your private practice · Sample data"
                       : `${w.course} · ${w.role === "instructor" ? "Instructor" : "Student"}`}
                   </small>
                 </span>

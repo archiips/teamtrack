@@ -116,6 +116,7 @@ export default function Page() {
     [cheer, setCheer] = useState(0),
     [dismissed, setDismissed] = useState(false),
     [account, setAccount] = useState<Account | null>(null),
+    [portal, setPortal] = useState<"student" | "instructor">("student"),
     [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]),
     [openTeams, setOpenTeams] = useState<OpenTeam[]>([]),
     [adding, setAdding] = useState(false),
@@ -144,9 +145,11 @@ export default function Page() {
     account?: Account;
     workspaces?: WorkspaceSummary[];
     classes?: ClassSummary[];
+    portal?: "student" | "instructor";
     openTeams?: OpenTeam[];
   }) {
     setS(d.state);
+    if (d.portal) setPortal(d.portal);
     setCsrf(d.csrf);
     setAccount(d.account || null);
     setWorkspaces(d.workspaces || []);
@@ -184,6 +187,11 @@ export default function Page() {
     const code = invite;
     if (code || monitorToken) {
       const me = await (await fetch("/api/workspace")).json();
+      if (code && me.portal === "instructor") {
+        setAdding(true);
+        await refresh();
+        return;
+      }
       const r = await fetch("/api/workspaces", {
         method: "POST",
         headers: {
@@ -223,6 +231,23 @@ export default function Page() {
     if (!r.ok) return setError("Could not open that workspace.");
     setView("overview");
     setSelected(null);
+    await refresh();
+  }
+  async function switchPortal() {
+    setMenu(false);
+    setSwitcher(false);
+    const r = await fetch("/api/workspaces", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-csrf-token": csrf },
+      body: JSON.stringify({
+        action: "portal",
+        portal: portal === "student" ? "instructor" : "student",
+      }),
+    });
+    if (!r.ok) return setError("Could not switch portals. Please retry.");
+    setView("overview");
+    setSelected(null);
+    setAdding(false);
     await refresh();
   }
   async function startPractice(role: "student" | "instructor") {
@@ -458,6 +483,7 @@ export default function Page() {
   if (account && (!s || adding))
     return (
       <Onboarding
+        portal={portal}
         account={account}
         workspaces={workspaces}
         classes={classes}
@@ -513,7 +539,11 @@ export default function Page() {
           <div className="welcome-theme">
             <ThemeToggle />
           </div>
-          <AuthPanel invite={invite} onDone={afterAuth} />
+          <AuthPanel
+            invite={invite}
+            professorInvite={!!monitorToken}
+            onDone={afterAuth}
+          />
         </section>
       </main>
     );
@@ -804,7 +834,14 @@ export default function Page() {
                 {namespace === "demo" ? "Product development" : s.project}
               </strong>
               <small>
-                {namespace === "demo" ? "Fall 2026 · CSS 474" : s.course}
+                {account
+                  ? `${portal === "instructor" ? "Professor" : "Student"} portal · `
+                  : ""}
+                {s.practice
+                  ? "Your private practice"
+                  : namespace === "demo"
+                    ? "Fall 2026 · CSS 474"
+                    : s.course}
               </small>
             </div>
             {account && <ChevronsUpDown size={15} />}
@@ -819,7 +856,11 @@ export default function Page() {
                   onClick={() => switchTo(w.namespace)}
                 >
                   <strong>{w.project}</strong>
-                  <small>{w.course}</small>
+                  <small>
+                    {w.practice
+                      ? "Your private practice · Sample data"
+                      : w.course}
+                  </small>
                   {w.namespace === namespace && <Check size={14} />}
                 </button>
               ))}
@@ -986,7 +1027,11 @@ export default function Page() {
                           <GraduationCap size={15} />
                           <span>
                             {w.project}
-                            <small>{w.practice ? "Practice" : w.course}</small>
+                            <small>
+                              {w.practice
+                                ? "Your private practice · Sample data"
+                                : w.course}
+                            </small>
                           </span>
                           {w.namespace === namespace && <Check size={14} />}
                         </button>
@@ -1004,7 +1049,7 @@ export default function Page() {
                       {!workspaces.some((w) => w.practice) && (
                         <button
                           role="menuitem"
-                          onClick={() => startPractice("student")}
+                          onClick={() => startPractice(portal)}
                         >
                           <GraduationCap size={15} />
                           <span>
@@ -1013,6 +1058,14 @@ export default function Page() {
                           </span>
                         </button>
                       )}
+                      <button role="menuitem" onClick={switchPortal}>
+                        <GraduationCap size={15} />
+                        <span>
+                          Switch to{" "}
+                          {portal === "student" ? "professor" : "student"}{" "}
+                          portal
+                        </span>
+                      </button>
                       <hr />
                       <button
                         role="menuitem"

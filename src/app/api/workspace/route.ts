@@ -14,17 +14,39 @@ export async function GET() {
     const headers = { "Cache-Control": "no-store" };
     const account = a.account ? await accountById(a.userId) : undefined;
     if (a.account && !account) throw Error("Please sign in");
-    const workspaces = a.account ? await listWorkspaces(a.userId) : [];
-    const classes = a.account ? await listClasses(a.userId) : [];
+    const allWorkspaces = a.account ? await listWorkspaces(a.userId) : [];
+    if (
+      a.account &&
+      a.namespace &&
+      !allWorkspaces.some((w) => w.namespace === a.namespace)
+    )
+      throw Error("Workspace access revoked");
+    const portal =
+      a.portal ||
+      allWorkspaces.find((w) => w.namespace === a.namespace)?.role ||
+      "student";
+    const workspaces = allWorkspaces.filter((w) => w.role === portal);
+    const classes =
+      a.account && portal === "instructor" ? await listClasses(a.userId) : [];
     const mapping = a.account ? await classMapping(a.userId) : {};
     const grouped = workspaces.map((w) => ({
       ...w,
       classId: mapping[w.namespace],
     }));
     // An own account with no workspace yet: the client shows create / join.
-    if (!a.namespace)
+    if (
+      !a.namespace ||
+      (a.account && !workspaces.some((w) => w.namespace === a.namespace))
+    )
       return NextResponse.json(
-        { state: null, account, workspaces: grouped, classes, csrf: a.csrf },
+        {
+          state: null,
+          account,
+          workspaces: grouped,
+          classes,
+          csrf: a.csrf,
+          portal,
+        },
         { headers },
       );
     const s = await readState(a.namespace);
@@ -33,6 +55,7 @@ export async function GET() {
     return NextResponse.json(
       {
         state,
+        portal,
         userId: a.userId,
         csrf: a.csrf,
         namespace: a.namespace,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sameOrigin, signIn } from "@/lib/auth";
+import { sameOrigin, signIn, portalValue } from "@/lib/auth";
 import { createAccount } from "@/lib/accounts";
 export async function POST(req: Request) {
   try {
@@ -8,13 +8,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, portal } = await req.json();
     const id = await createAccount(
       String(name ?? ""),
       String(email ?? ""),
       String(password ?? ""),
     );
-    return signIn(NextResponse.json({ ok: true }), id, "", true);
+    return signIn(
+      NextResponse.json({ ok: true }),
+      id,
+      "",
+      true,
+      portalValue(portal),
+    );
   } catch (e) {
     const message = e instanceof Error ? e.message : "";
     // Only our own validation messages reach the person; database errors stay generic.
