@@ -159,6 +159,16 @@ try {
       exact: true,
     })
     .waitFor();
+  await emptyPage.goto(base + "/?monitor=" + "a".repeat(64));
+  await emptyPage
+    .getByRole("button", {
+      name: "Switch to professor portal to accept",
+      exact: true,
+    })
+    .click();
+  await emptyPage
+    .getByRole("button", { name: "Accept monitoring invitation", exact: true })
+    .waitFor();
   await emptyContext.close();
   assert.deepEqual(errors, []);
   console.log(

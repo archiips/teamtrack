@@ -290,7 +290,8 @@ export function Onboarding({
     setError("");
     try {
       await post("/api/workspaces", body, csrf);
-      await onDone();
+      if (kind === "portal") await onRefresh();
+      else await onDone();
       setBusy("");
     } catch (err) {
       setError((err as Error).message);
@@ -367,10 +368,17 @@ export function Onboarding({
               className="primary"
               disabled={!!busy}
               onClick={() =>
-                act("monitor", { action: "monitor.join", token: monitorToken })
+                role === "instructor"
+                  ? act("monitor", {
+                      action: "monitor.join",
+                      token: monitorToken,
+                    })
+                  : act("portal", { action: "portal", portal: "instructor" })
               }
             >
-              Accept monitoring invitation
+              {role === "instructor"
+                ? "Accept monitoring invitation"
+                : "Switch to professor portal to accept"}
             </button>
           </section>
         )}
